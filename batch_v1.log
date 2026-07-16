@@ -1,0 +1,84 @@
+  2026-04-25: FAIL no report date found in HTML
+  2026-04-26: FAIL unsupported operand type(s) for -: 'NoneType' and 'float'
+  2026-04-27  est=2.0204  off=2.0230  |err|=0.1260pp   
+  2026-04-28  est=1.9921  off=1.9956  |err|=0.1728pp   
+  2026-04-29  est=2.0438  off=2.0432  |err|=0.0298pp   
+  2026-04-30  est=2.0356  off=2.0393  |err|=0.1809pp   
+  2026-05-01: FAIL unsupported operand type(s) for -: 'NoneType' and 'float'
+  2026-05-02: FAIL unsupported operand type(s) for -: 'NoneType' and 'float'
+  2026-05-03: FAIL unsupported operand type(s) for -: 'NoneType' and 'float'
+  2026-05-04: FAIL unsupported operand type(s) for -: 'NoneType' and 'float'
+  2026-05-05: FAIL unsupported operand type(s) for -: 'NoneType' and 'float'
+  2026-05-06  est=2.0933  off=2.0919  |err|=0.0677pp   
+  2026-05-07  est=2.1202  off=2.1207  |err|=0.0237pp   
+  2026-05-08  est=2.0981  off=2.1015  |err|=0.1580pp   
+  2026-05-09: FAIL unsupported operand type(s) for -: 'NoneType' and 'float'
+  2026-05-10: FAIL unsupported operand type(s) for -: 'NoneType' and 'float'
+  2026-05-11  est=2.1729  off=2.1713  |err|=0.0781pp   
+  2026-05-12  est=2.1724  off=2.1748  |err|=0.1108pp   
+  2026-05-13  est=2.2298  off=2.2289  |err|=0.0415pp   
+  2026-05-14  est=2.1785  off=2.1833  |err|=0.2132pp   
+  2026-05-15  est=2.1689  off=2.1724  |err|=0.1595pp   
+  2026-05-16: FAIL unsupported operand type(s) for -: 'NoneType' and 'float'
+  2026-05-17: FAIL unsupported operand type(s) for -: 'NoneType' and 'float'
+  2026-05-18  est=2.1624  off=2.1656  |err|=0.1481pp   
+  2026-05-19  est=2.1599  off=2.1625  |err|=0.1213pp   
+  2026-05-20  est=2.1677  off=2.1692  |err|=0.0682pp   
+  2026-05-21  est=2.1161  off=2.1219  |err|=0.2656pp   
+  2026-05-22  est=2.1800  off=2.1768  |err|=0.1516pp   
+  2026-05-23: FAIL unsupported operand type(s) for -: 'NoneType' and 'float'
+  2026-05-24: FAIL unsupported operand type(s) for -: 'NoneType' and 'float'
+  2026-05-25  est=2.2203  off=2.2189  |err|=0.0647pp   
+  2026-05-26  est=2.2288  off=2.2304  |err|=0.0735pp   
+  2026-05-27  est=2.2297  off=2.2322  |err|=0.1137pp   
+  2026-05-28  est=2.2737  off=2.2733  |err|=0.0189pp   
+  2026-05-29  est=2.2230  off=2.2273  |err|=0.1886pp   
+  2026-05-30: FAIL unsupported operand type(s) for -: 'NoneType' and 'float'
+  2026-05-31: FAIL unsupported operand type(s) for -: 'NoneType' and 'float'
+  2026-06-01  est=2.1771  off=2.1819  |err|=0.2165pp   
+  2026-06-02  est=2.2377  off=2.2390  |err|=0.0612pp   
+  2026-06-03  est=2.2738  off=2.2762  |err|=0.1067pp   
+  2026-06-04  est=2.2551  off=2.2584  |err|=0.1451pp   
+  2026-06-05  est=2.1838  off=2.1898  |err|=0.2651pp   
+  2026-06-06: FAIL unsupported operand type(s) for -: 'NoneType' and 'float'
+  2026-06-07: FAIL unsupported operand type(s) for -: 'NoneType' and 'float'
+  2026-06-08  est=2.1068  off=2.1128  |err|=0.2763pp   
+  2026-06-09  est=2.1938  off=2.1930  |err|=0.0383pp   
+  2026-06-10  est=2.1316  off=2.1373  |err|=0.2598pp   
+  2026-06-11  est=2.1110  off=2.1148  |err|=0.1770pp   
+  2026-06-12  est=2.1233  off=2.1236  |err|=0.0148pp   
+  2026-06-13: FAIL unsupported operand type(s) for -: 'NoneType' and 'float'
+  2026-06-14: FAIL unsupported operand type(s) for -: 'NoneType' and 'float'
+  2026-06-15  est=2.2341  off=2.2304  |err|=0.1753pp   
+  2026-06-16  est=2.2665  off=2.2673  |err|=0.0337pp   
+  2026-06-17  est=2.3005  off=2.3015  |err|=0.0460pp   
+  2026-06-18  est=2.3463  off=2.3467  |err|=0.0159pp   
+  2026-06-19: FAIL unsupported operand type(s) for -: 'NoneType' and 'float'
+  2026-06-20: FAIL unsupported operand type(s) for -: 'NoneType' and 'float'
+  2026-06-21: FAIL unsupported operand type(s) for -: 'NoneType' and 'float'
+  2026-06-22  est=2.4034  off=2.4040  |err|=0.0254pp   
+  2026-06-23  est=2.3094  off=2.3146  |err|=0.2166pp   
+  2026-06-24  est=2.3450  off=2.3454  |err|=0.0178pp   
+  2026-06-25  est=2.4096  off=2.4078  |err|=0.0754pp   
+  2026-06-26  est=2.3075  off=2.3158  |err|=0.3454pp   
+  2026-06-27: FAIL unsupported operand type(s) for -: 'NoneType' and 'float'
+  2026-06-28: FAIL unsupported operand type(s) for -: 'NoneType' and 'float'
+  2026-06-29  est=2.3259  off=2.3273  |err|=0.0604pp   
+  2026-06-30  est=2.3945  off=2.3920  |err|=0.1084pp   
+  2026-07-01  est=2.3444  off=2.3493  |err|=0.2029pp   
+  2026-07-02  est=2.2127  off=2.2236  |err|=0.4633pp   
+  2026-07-03  est=2.2228  off=2.2247  |err|=0.0833pp   
+  2026-07-04: FAIL unsupported operand type(s) for -: 'NoneType' and 'float'
+  2026-07-05: FAIL unsupported operand type(s) for -: 'NoneType' and 'float'
+  2026-07-06  est=2.1831  off=2.1875  |err|=0.1959pp   
+
+落盘 → /run/csi/mount-root/nas/eab0d61a99b6696edb3d2aff87b585e8/code/fund_estimator/.cache/daily_batch_160223_v_index_full_2026-04-25_2026-07-06.csv
+
+=== 汇总 ===
+  N          = 47
+  MAE (pp)   = 0.1320
+  RMSE (pp)  = 0.1629
+  Mean err   = -0.0958 pp (bias)
+  Median     = 0.1137
+  Max        = 0.4633
+  days over  = 0/47 (>0.5pp)

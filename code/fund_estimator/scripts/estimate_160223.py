@@ -1,122 +1,73 @@
-"""单次估值 CLI（实时盘中）—— scripts/estimate_160223.py。
+"""CLI: 对 LOF 160223 做一次实时估值。
 
-README §3.1 的「实时盘中」版本：
-- 从天天基金拿 T-1 单位净值 (dwjz) 作为基线；
-- 从新浪/腾讯拿创业板指实时点位算涨跌%（或用持仓还原）；
-- 输出估算 NAV，并可与天天基金官方估值 (gsz) 交叉校验。
-
-用法::
-
-    python code/fund_estimator/scripts/estimate_160223.py --method v_index_full_no_cash
-    python code/fund_estimator/scripts/estimate_160223.py --method v_top10 --cross-check
+用法:
+    python -m fund_estimator.scripts.estimate_160223 [--last-nav 2.2247]
 """
 
 from __future__ import annotations
 
 import argparse
 import json
-import os
 import sys
-from typing import Optional
+from pathlib import Path
 
-_THIS = os.path.dirname(os.path.abspath(__file__))
-_CODE_ROOT = os.path.dirname(os.path.dirname(_THIS))
-if _CODE_ROOT not in sys.path:
-    sys.path.insert(0, _CODE_ROOT)
+# 让脚本可以直接 `python scripts/estimate_160223.py` 运行
+ROOT = Path(__file__).resolve().parent.parent.parent
+sys.path.insert(0, str(ROOT))
 
-from fund_estimator.data_sources.cache import CsvCache  # noqa: E402
-from fund_estimator.data_sources.eastmoney.holdings_full import fetch_full_holdings  # noqa: E402
-from fund_estimator.data_sources.sina.realtime import fetch_realtime as fetch_sina  # noqa: E402
-from fund_estimator.data_sources.tencent.realtime import fetch_realtime as fetch_tencent  # noqa: E402
-from fund_estimator.data_sources.tiantian import fetch_official_estimate  # noqa: E402
+from fund_estimator.data_sources.eastmoney.holding import fetch_top_holdings  # noqa: E402
+from fund_estimator.data_sources.sina.realtime import build_symbol, fetch_quotes  # noqa: E402
 from fund_estimator.estimators.holdings_based import (  # noqa: E402
-    estimate,
-    CYB_INDEX,
-    DEFAULT_METHOD,
-    METHODS,
+    WeightPolicy,
+    estimate_nav,
 )
 
-FUND_CODE = "160223"
 
-
-def _fetch_quotes(codes: list[str]) -> dict:
-    """新浪优先，失败降级腾讯（README §10 多源容灾）。"""
-    try:
-        q = fetch_sina(codes)
-        if q:
-            return q
-    except Exception:  # noqa: BLE001
-        pass
-    try:
-        return fetch_tencent(codes)
-    except Exception:  # noqa: BLE001
-        return {}
-
-
-def run(method: str, fund_code: str = FUND_CODE, cross_check: bool = False) -> dict:
-    cache = CsvCache()
-
-    # 1. 基线：天天基金官方估值给出 T-1 净值(dwjz)
-    official = fetch_official_estimate(fund_code)
-    if not official or official.dwjz <= 0:
-        raise RuntimeError("无法获取 T-1 单位净值（天天基金 fundgz 接口）")
-    t1_nav = official.dwjz
-    t1_date = official.jzrq
-    today = (official.gztime or "")[:10] or ""
-
-    # 2. 行情
-    need_stocks = method in ("v_top10", "v_index_blend", "v_residual_uncovered")
-    holdings = []
-    quotes_today: dict = {}
-    codes = [CYB_INDEX]
-    if need_stocks:
-        full = fetch_full_holdings(fund_code, cache=cache)
-        holdings = full.holdings
-        codes += [h.secid for h in holdings]
-
-    quotes = _fetch_quotes(codes)
-    quotes_today = quotes
-
-    index_change_pct = None
-    idx = quotes.get(CYB_INDEX)
-    if idx:
-        index_change_pct = idx.change_pct
-
-    # 3. 估值
-    est = estimate(
-        method,
-        fund_code=fund_code,
-        today=today,
-        t1_date=t1_date,
-        t1_nav=t1_nav,
-        index_change_pct=index_change_pct,
-        holdings=holdings,
-        quotes_today=quotes_today,
-        quotes_t1={},  # 实时场景用 quote.prev_close 作为 T-1 价
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--fund-code", default="160223")
+    parser.add_argument(
+        "--last-nav",
+        type=float,
+        default=None,
+        help="最近一次官方净值（T-1 公布）；不传时从天天基金拉",
     )
+    parser.add_argument("--top-n", type=int, default=10)
+    args = parser.parse_args()
 
-    out = est.to_dict()
-    if cross_check and official:
-        out["tiantian_official_gsz"] = official.gsz
-        out["tiantian_official_gszzl"] = official.gszzl
-        if official.gsz > 0:
-            out["diff_vs_official_gsz"] = round(est.estimated_nav - official.gsz, 4)
-    return out
+    holding = fetch_top_holdings(args.fund_code, top_n=args.top_n)
+    print(f"[1/3] 基金: {holding.fund_name} ({holding.fund_code})")
+    print(f"      股票仓位: {holding.stock_position_pct}%")
+    print(f"      持仓股票: {[p.code for p in holding.stock_positions]}")
 
+    if not holding.stock_positions:
+        print("无持仓数据，退出")
+        return 1
 
-def main(argv: Optional[list[str]] = None) -> int:
-    try:
-        sys.stdout.reconfigure(encoding="utf-8")
-    except Exception:  # noqa: BLE001
-        pass
-    parser = argparse.ArgumentParser(description="LOF 160223 单次实时估值")
-    parser.add_argument("--method", default=DEFAULT_METHOD, choices=METHODS)
-    parser.add_argument("--fund", default=FUND_CODE)
-    parser.add_argument("--cross-check", action="store_true", help="与天天基金官方估值交叉校验")
-    args = parser.parse_args(argv)
+    symbols = [build_symbol(p.market, p.code) for p in holding.stock_positions]
+    quotes = fetch_quotes(symbols)
+    print(f"[2/3] 拉取实时行情: {len(quotes)}/{len(symbols)} 成功")
+    for q in quotes:
+        print(f"      {q.market}{q.code} {q.name} 现价={q.price} 涨跌={q.change_pct:.2f}%")
 
-    result = run(args.method, args.fund, cross_check=args.cross_check)
-    print(json.dumps(result, ensure_ascii=False, indent=2))
+    if args.last_nav is None:
+        # 默认拉天天基金当下 T-1 的单位净值
+        import urllib.request
+        import urllib.parse
+        import re
+        url = f"https://fundgz.1234567.com.cn/js/{args.fund_code}.js"
+        with urllib.request.urlopen(url, timeout=10) as resp:
+            raw = resp.read().decode("utf-8", errors="ignore")
+        m = re.search(r'"dwjz":"([\d.]+)"', raw)
+        last_nav = float(m.group(1)) if m else 1.0
+        print(f"      最近官方净值(T-1)={last_nav}（从天天基金拉取）")
+    else:
+        last_nav = args.last_nav
+        print(f"      最近官方净值(T-1)={last_nav}（来自 --last-nav）")
+
+    nav = estimate_nav(holding, quotes, last_nav, WeightPolicy())
+    print(f"[3/3] 估算结果:")
+    print(json.dumps(nav.to_dict(), ensure_ascii=False, indent=2))
     return 0
 
 

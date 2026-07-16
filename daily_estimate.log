@@ -1,0 +1,17 @@
+=== 160223 盘后估值 (v_index_full) ===
+{
+  "fund_code": "160223",
+  "today": "2026-07-06",
+  "t1_date": "2026-07-03",
+  "t1_nav": 2.2247,
+  "estimated_nav": 2.1831417368618986,
+  "estimated_change_pct": -1.868,
+  "method": "v_index_full",
+  "official_nav": 2.1875,
+  "official_change_pct": -1.67
+}
+
+对比官方 NAV 2.1875:  差异 -0.0044 (-0.1992%)
+
+落盘 → /run/csi/mount-root/nas/eab0d61a99b6696edb3d2aff87b585e8/code/fund_estimator/.cache/daily_log.csv
+EXIT=0

@@ -1,146 +1,156 @@
-"""天天基金 / 东方财富 —— 历史净值 API（含分页）。
+"""东方财富基金历史净值 API。
 
-接口（github_code.md §9）::
+URL: http://api.fund.eastmoney.com/f10/lsjz?fundCode=160223&pageIndex=1&pageSize=20
 
-    http://api.fund.eastmoney.com/f10/lsjz?fundCode={code}&pageIndex={i}&pageSize=20
+返回 JSON:
+    {"Data": {"LSJZList": [{"FSRQ":"2026-07-06", "DWJZ":"2.1875", "JZZZL":"-1.67", ...}, ...],
+     "TotalCount": 2343}
 
-返回 JSON：``{ Data: { LSJZList: [ {FSRQ, DWJZ, LJJZ, JZZZL}, ... ], TotalCount } }``。
-- FSRQ  净值日期
-- DWJZ  单位净值
-- LJJZ  累计净值
-- JZZZL 日增长率(%)
-
-ITERATIONS.md 强调「强制单页 20 + 完整分页」，本模块循环抓取所有页。
+本地缓存：.cache/lsjz_{code}.csv
 """
 
 from __future__ import annotations
 
 import json
-import re
-from typing import Optional
+import sys
+import urllib.parse
+import urllib.request
+from datetime import date
+from pathlib import Path
+from typing import Iterator
 
-from ..cache import CsvCache, http_get
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
+from fund_estimator.data_sources.cache import read_csv, write_csv  # noqa: E402
 
-
-LSJZ_URL = (
-    "http://api.fund.eastmoney.com/f10/lsjz"
-    "?fundCode={code}&pageIndex={page}&pageSize={size}"
-    "&startDate={start}&endDate={end}&_=0"
-)
-REFERER = "http://fundf10.eastmoney.com/jjjz_{code}.html"
-
-_JSONP_STRIP = re.compile(r"^[^{]*|[^}]*$")
-
-
-def _parse_lsjz(text: str) -> tuple[list[dict], int]:
-    """解析 lsjz 返回，返回 (rows, total_count)。"""
-    # 接口有时返回 jsonp/裸 JSON，容错剥离
-    cleaned = text.strip()
-    if not cleaned.startswith("{"):
-        cleaned = _JSONP_STRIP.sub("", cleaned)
-    data = json.loads(cleaned)
-    payload = data.get("Data") or {}
-    lst = payload.get("LSJZList") or []
-    total = int(data.get("TotalCount") or payload.get("TotalCount") or len(lst))
-    rows = []
-    for item in lst:
-        rows.append(
-            {
-                "date": item.get("FSRQ", ""),
-                "nav": item.get("DWJZ", ""),
-                "acc_nav": item.get("LJJZ", ""),
-                "change_pct": item.get("JZZZL", ""),
-            }
-        )
-    return rows, total
+URL = "http://api.fund.eastmoney.com/f10/lsjz"
+HEADERS = {
+    "User-Agent": "Mozilla/5.0",
+    "Referer": "https://fund.eastmoney.com/",
+}
 
 
-def _fetch_all_pages(
+def fetch_history(
     fund_code: str,
-    start: str,
-    end: str,
-    size: int = 20,
-) -> list[dict]:
-    """按 ITERATIONS 要求：单页 size=20，循环翻页抓全区间。"""
-    all_rows: list[dict] = []
-    page = 1
-    while True:
-        url = LSJZ_URL.format(code=fund_code, page=page, size=size, start=start, end=end)
-        text = http_get(url, encoding="utf-8", referer=REFERER.format(code=fund_code))
-        rows, total = _parse_lsjz(text)
-        if not rows:
-            break
-        all_rows.extend(rows)
-        if len(all_rows) >= total or len(rows) < size:
-            break
-        page += 1
-        if page > 200:  # 安全上限
-            break
-    # 去重 + 按日期升序
-    seen = {}
-    for r in all_rows:
-        if r["date"]:
-            seen[r["date"]] = r
-    return sorted(seen.values(), key=lambda r: r["date"])
-
-
-def fetch_nav_history(
-    fund_code: str,
-    start: str = "",
-    end: str = "",
-    *,
-    cache: Optional[CsvCache] = None,
+    start: date | None = None,
+    end: date | None = None,
+    page_size: int = 20,  # API 强制单页 20
     force: bool = False,
 ) -> list[dict]:
-    """抓取基金历史净值。
+    """分页拉取历史净值，按日期升序。
 
-    Returns
-    -------
-    list[dict]
-        每项含 ``date`` / ``nav`` / ``acc_nav`` / ``change_pct``，按日期升序。
+    返回每条: {"date": date, "nav": float, "change_pct": float, "bonus": float, "split": float}
+
+    带本地缓存。
     """
-    cache = cache or CsvCache()
-    key = f"{fund_code}_{start or 'all'}_{end or 'all'}"
+    cache_name = f"lsjz_{fund_code}.csv"
+    if not force:
+        cached = read_csv(cache_name)
+        if cached:
+            out2 = []
+            for r in cached:
+                try:
+                    out2.append(
+                        {
+                            "date": date.fromisoformat(r["date"]),
+                            "nav": float(r["nav"]) if r["nav"] else None,
+                            "change_pct": float(r["change_pct"]) if r["change_pct"] else None,
+                            "bonus": float(r.get("bonus") or 0),
+                            "split": float(r.get("split") or 1),
+                        }
+                    )
+                except (KeyError, ValueError):
+                    continue
+            out2.sort(key=lambda r: r["date"])
+            # 区间裁剪
+            if start or end:
+                out2 = [
+                    r
+                    for r in out2
+                    if (start is None or r["date"] >= start)
+                    and (end is None or r["date"] <= end)
+                ]
+            if out2:
+                return out2
 
-    def _fetch() -> list[dict]:
-        return _fetch_all_pages(fund_code, start, end)
-
-    rows = cache.get_or_fetch(
-        namespace="nav_history",
-        key=key,
-        fetch=_fetch,
-        fieldnames=["date", "nav", "acc_nav", "change_pct"],
-        force=force,
-    )
-    # 数值化 & 过滤空 NAV
-    out = []
-    for r in rows:
+    out: list[dict] = []
+    page = 1
+    while True:
+        params = {
+            "fundCode": fund_code,
+            "pageIndex": str(page),
+            "pageSize": str(page_size),
+            "_": str(int(date.today().strftime("%Y%m%d")) + page),
+        }
+        if start:
+            params["startDate"] = start.isoformat()
+        if end:
+            params["endDate"] = end.isoformat()
+        url = URL + "?" + urllib.parse.urlencode(params)
+        req = urllib.request.Request(url, headers=HEADERS)
+        with urllib.request.urlopen(req, timeout=15) as resp:
+            raw = resp.read().decode("utf-8", errors="ignore")
         try:
-            nav = float(r["nav"])
-        except (TypeError, ValueError):
-            continue
-        out.append(
-            {
-                "date": r["date"],
-                "nav": nav,
-                "acc_nav": float(r["acc_nav"]) if r.get("acc_nav") not in ("", None) else nav,
-                "change_pct": float(r["change_pct"]) if r.get("change_pct") not in ("", None) else 0.0,
-            }
-        )
+            j = json.loads(raw)
+        except json.JSONDecodeError:
+            break
+        rows = j.get("Data", {}).get("LSJZList", [])
+        if not rows:
+            break
+        for r in rows:
+            try:
+                d = date.fromisoformat(r["FSRQ"])
+            except (KeyError, ValueError):
+                continue
+            out.append(
+                {
+                    "date": d,
+                    "nav": float(r["DWJZ"]) if r.get("DWJZ") else None,
+                    "change_pct": float(r["JZZZL"]) if r.get("JZZZL") else None,
+                    "bonus": float(r.get("FHFCZ") or 0),
+                    "split": float(r.get("FHFCBZ") or 1),
+                }
+            )
+        total = j.get("TotalCount", 0) or 0
+        # 防止死循环：超过 total + 5 行就跳
+        if len(out) >= total or page > 200:
+            break
+        page += 1
+    out.sort(key=lambda r: r["date"])
+
+    # 写缓存
+    if out:
+        try:
+            write_csv(
+                cache_name,
+                [
+                    {
+                        "date": r["date"].isoformat(),
+                        "nav": r["nav"] or "",
+                        "change_pct": r["change_pct"] if r["change_pct"] is not None else "",
+                        "bonus": r["bonus"],
+                        "split": r["split"],
+                    }
+                    for r in out
+                ],
+            )
+        except Exception:
+            pass
+
+    # 区间裁剪
+    if start or end:
+        out = [
+            r
+            for r in out
+            if (start is None or r["date"] >= start) and (end is None or r["date"] <= end)
+        ]
     return out
 
 
-def build_nav_map(rows: list[dict]) -> dict[str, float]:
-    """把 nav_history 行转成 {date: nav} 字典。"""
-    return {r["date"]: r["nav"] for r in rows}
-
-
-def prev_trading_nav(rows: list[dict], target_date: str) -> Optional[tuple[str, float]]:
-    """返回 target_date 之前最近一个有净值的交易日 (date, nav)。"""
-    prev = None
-    for r in rows:
-        if r["date"] < target_date:
-            prev = (r["date"], r["nav"])
-        else:
-            break
-    return prev
+if __name__ == "__main__":
+    import sys
+    code = sys.argv[1] if len(sys.argv) > 1 else "160223"
+    rows = fetch_history(code)
+    print(f"=== {code} 共 {len(rows)} 条历史净值 ===")
+    for r in rows[-10:]:
+        change = f"{r['change_pct']:+.2f}%" if r["change_pct"] is not None else "  -  "
+        print(f"  {r['date']}  NAV={r['nav']}  涨跌={change}")

@@ -1,78 +1,81 @@
-"""东方财富基金档案 —— 季报完整持仓 + 占净值比例。
+"""东方财富基金持仓明细（季报/半年报/年报）。
 
-与 holding.py 的区别：不限制 topline，尽量抓全所有披露的重仓股，
-并计算 covered_weight（已覆盖的净值比例合计）与 uncovered_weight（长尾）。
+URL 模式:
+    http://fundf10.eastmoney.com/FundArchivesDatas.aspx?type=jjcc&code=160223&topline=10&year=2026&month=3
 
-对齐 ITERATIONS.md：v_top10 只覆盖 53.51%，剩余 ~42% 是误差主要来源。
-holdings_full 帮助 v_residual_uncovered / v_index_blend 做「长尾代理」。
+返回: HTML 内的 apidata = {content: "...<table>...</table>..."};
+
+解析后得到字段：股票代码 / 名称 / 占净值比例(%) / 持股数(万股) / 持仓市值(万元)
 """
 
 from __future__ import annotations
 
-from dataclasses import dataclass
-from typing import Optional
+import re
+import urllib.parse
+import urllib.request
+from datetime import date
 
-from ..cache import CsvCache, http_get
-from ...core.models import FundHolding, _guess_market
-from .holding import _parse_holdings, ARCHIVE_URL, REFERER
-
-
-@dataclass
-class FullHoldings:
-    """完整持仓视图。"""
-
-    fund_code: str
-    report_date: str
-    holdings: list[FundHolding]
-
-    @property
-    def covered_weight_pct(self) -> float:
-        """已披露持仓占净值比例合计（百分数）。"""
-        return sum(h.weight_pct for h in self.holdings)
-
-    @property
-    def uncovered_weight_pct(self) -> float:
-        """未覆盖长尾占净值比例（百分数），至少为 0。
-
-        这里以「股票总仓位约 95%」为上界估计（LOF 160223 招募书：股票 ≥85%）。
-        """
-        stock_position = 95.0
-        return max(0.0, stock_position - self.covered_weight_pct)
+BASE_URL = "http://fundf10.eastmoney.com/FundArchivesDatas.aspx"
+HEADERS = {
+    "User-Agent": "Mozilla/5.0",
+    "Referer": "https://fundf10.eastmoney.com/",
+}
 
 
-def fetch_full_holdings(
-    fund_code: str,
-    *,
-    topline: int = 100,
-    cache: Optional[CsvCache] = None,
-    force: bool = False,
-) -> FullHoldings:
-    """抓取基金完整持仓（尽可能多，默认上限 100 只）。"""
-    cache = cache or CsvCache()
+def fetch_holdings_html(fund_code: str, year: int, month: int, topline: int = 10) -> str:
+    """拉取某基金某报告期的股票持仓表格 HTML 片段。"""
+    params = {"type": "jjcc", "code": fund_code, "topline": str(topline), "year": str(year), "month": str(month)}
+    url = BASE_URL + "?" + urllib.parse.urlencode(params)
+    req = urllib.request.Request(url, headers=HEADERS)
+    with urllib.request.urlopen(req, timeout=20) as resp:
+        raw = resp.read().decode("utf-8", errors="ignore")
+    return raw
 
-    def _fetch() -> list[dict]:
-        url = ARCHIVE_URL.format(code=fund_code, topline=topline)
-        text = http_get(url, encoding="utf-8", referer=REFERER.format(code=fund_code))
-        return _parse_holdings(text, topline)
 
-    rows = cache.get_or_fetch(
-        namespace="holding_full",
-        key=f"{fund_code}_{topline}",
-        fetch=_fetch,
-        fieldnames=["stock_code", "stock_name", "weight_pct", "market", "report_date"],
-        force=force,
+def parse_holdings(html: str) -> tuple[date, list[dict]]:
+    """从 html 中抽取 (报告截止日, 持仓列表)。"""
+    # 报告日: <font class='px12'>YYYY-MM-DD</font>
+    m_date = re.search(r"<font class='px12'>(\d{4}-\d{2}-\d{2})</font>", html)
+    if not m_date:
+        raise ValueError("no report date found in HTML")
+    report_date = date.fromisoformat(m_date.group(1))
+    # 行: <tr><td>序号</td><td><a ...>代码</a></td>...<td class='tor'>占比%</td><td>股数万股</td><td>市值万元</td></tr>
+    holdings: list[dict] = []
+    row_re = re.compile(
+        r"<tr>\s*<td>\d+</td>\s*<td>\s*<a[^>]*>(\d{6})</a>\s*</td>\s*<td[^>]*>\s*<a[^>]*>([^<]+)</a>.*?"
+        r"<td class='tor'>\s*([\d.]+)\s*%\s*</td>\s*<td class='tor'>\s*([\d.]+)\s*</td>\s*"
+        r"<td class='tor'>\s*([\d,\.]+)\s*</td>\s*</tr>",
+        re.S,
     )
-
-    holdings = [
-        FundHolding(
-            stock_code=r["stock_code"],
-            stock_name=r["stock_name"],
-            weight_pct=float(r["weight_pct"]),
-            market=r.get("market", "") or _guess_market(r["stock_code"]),
-            report_date=r.get("report_date", ""),
+    for m in row_re.finditer(html):
+        code, name, pct, shares, mv = m.groups()
+        holdings.append(
+            {
+                "code": code,
+                "name": name.strip(),
+                "weight_pct": float(pct),
+                "shares_wan": float(shares),
+                "mv_wan": float(mv.replace(",", "")),
+            }
         )
-        for r in rows
-        if r.get("stock_code")
-    ]
-    report_date = holdings[0].report_date if holdings else ""
-    return FullHoldings(fund_code=fund_code, report_date=report_date, holdings=holdings)
+    return report_date, holdings
+
+
+def fetch_holdings(fund_code: str, year: int, month: int, topline: int = 10) -> tuple[date, list[dict]]:
+    """一站式：拉取 + 解析。"""
+    html = fetch_holdings_html(fund_code, year, month, topline)
+    return parse_holdings(html)
+
+
+if __name__ == "__main__":
+    import sys
+    code = sys.argv[1] if len(sys.argv) > 1 else "160223"
+    year = int(sys.argv[2]) if len(sys.argv) > 2 else 2026
+    month = int(sys.argv[3]) if len(sys.argv) > 3 else 3
+    report_date, hs = fetch_holdings(code, year, month)
+    print(f"=== {code} 2026{month} 季报 截止 {report_date} ===")
+    total = 0.0
+    for h in hs:
+        print(f"  {h['code']} {h['name']:6s} 占净值 {h['weight_pct']:>5.2f}%  持股 {h['shares_wan']:>8.2f} 万")
+        total += h["weight_pct"]
+    print(f"Top10 累计: {total:.2f}%")
