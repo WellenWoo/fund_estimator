@@ -1,7 +1,12 @@
 # -*- coding: utf-8 -*-
 """
-Fund Real-time Valuation GUI
-Uses wxPython to display real-time fund valuations.
+基金实时估值系统 - LOF 套利辅助工具
+
+功能:
+  1. 获取基金估算净值 (天天基金 fundgz)
+  2. 获取基金场内实时价格 (腾讯 qt.gtimg.cn)
+  3. 计算溢价率/折价率
+  4. 提示套利机会 (折价买入 / 溢价卖出)
 """
 
 import sys
@@ -11,29 +16,46 @@ import wx
 import wx.grid
 from datetime import datetime
 
-# --- Path setup: make fund_estimator_index_agent importable ---
+# ====================================================================
+# Path setup
+# ====================================================================
 _SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 _PROJECT_CODE = os.path.join(_SCRIPT_DIR, '..', 'code', 'fund_estimator')
 if _PROJECT_CODE not in sys.path:
     sys.path.insert(0, _PROJECT_CODE)
 
-from fund_estimator_index_agent import estimate_realtime, classify_fund_type
+# data_sources 目录需要在路径中 (for relative imports in fund_realtime)
+_DATA_SOURCES = os.path.join(_PROJECT_CODE, 'data_sources')
+if _DATA_SOURCES not in sys.path:
+    sys.path.insert(0, _DATA_SOURCES)
+
+from fund_estimator_index_agent import estimate_realtime
+from fund_realtime import (
+    fetch_fund_snapshot,
+    fetch_all_fund_snapshots,
+)
 
 # --- Database path ---
 _DB_PATH = os.path.join(_SCRIPT_DIR, '..', 'lof_database', 'lof_master.db')
 
 
+# ====================================================================
+# Grid 组件
+# ====================================================================
+
 class FundGrid(wx.grid.Grid):
-    """Custom wx.Grid with column labels for fund valuation display."""
+    """基金估值表格，含场内价格与溢价率列。"""
 
     COLUMNS = [
         ("fund_code", "基金代码", 90),
-        ("fund_name", "基金名称", 220),
-        ("est_nav", "估算净值", 100),
-        ("est_change", "估算涨幅(%)", 110),
-        ("t1_nav", "T-1净值", 90),
-        ("method", "估算方法", 160),
-        ("status", "状态", 80),
+        ("fund_name", "基金名称", 180),
+        ("intraday_price", "场内价格", 90),
+        ("intraday_change", "场内涨幅(%)", 90),
+        ("est_nav", "估算净值", 90),
+        ("est_change", "估算涨幅(%)", 90),
+        ("premium_pct", "溢价率(%)", 90),
+        ("signal", "套利信号", 150),
+        ("status", "状态", 70),
     ]
 
     def __init__(self, parent):
@@ -41,22 +63,42 @@ class FundGrid(wx.grid.Grid):
         n_cols = len(self.COLUMNS)
         self.CreateGrid(0, n_cols)
 
-        for idx, (key, label, width) in enumerate(self.COLUMNS):
+        for idx, (_, label, width) in enumerate(self.COLUMNS):
             self.SetColLabelValue(idx, label)
             self.SetColMinimalWidth(idx, width)
             self.AutoSizeColumn(idx, False)
 
         self.EnableEditing(False)
-        self.SetRowLabelSize(0)  # hide row labels
+        self.SetRowLabelSize(0)
+
+        # 颜色：溢价率正数红色，负数绿色
+        self.red_brush = wx.Brush(wx.Colour(255, 240, 240))
+        self.green_brush = wx.Brush(wx.Colour(240, 255, 240))
+        self.white_brush = wx.Brush(wx.WHITE)
+
+    def _color_cell(self, row, col, value_str):
+        """对溢价率列着色。"""
+        if col == 6:  # premium_pct
+            try:
+                v = float(value_str)
+                if v > 0:
+                    self.SetCellBackgroundColour(row, col, self.red_brush)
+                elif v < 0:
+                    self.SetCellBackgroundColour(row, col, self.green_brush)
+                else:
+                    self.SetCellBackgroundColour(row, col, self.white_brush)
+            except (ValueError, TypeError):
+                self.SetCellBackgroundColour(row, col, self.white_brush)
 
     def append_row(self, row_idx, data_dict):
-        """Append a single row of data. data_dict keys match COLUMNS keys."""
+        """写入一行数据。"""
         for idx, (key, _, _) in enumerate(self.COLUMNS):
             val = str(data_dict.get(key, ""))
             self.SetCellValue(row_idx, idx, val)
+            self._color_cell(row_idx, idx, val)
 
     def clear_and_add(self, rows_data):
-        """Clear grid and add a list of row dicts."""
+        """清空并重绘表格。"""
         self.ClearGrid()
         if rows_data:
             self.AppendRows(len(rows_data))
@@ -64,65 +106,63 @@ class FundGrid(wx.grid.Grid):
                 self.append_row(i, row_data)
 
 
+# ====================================================================
+# 主窗口
+# ====================================================================
+
 class MainFrame(wx.Frame):
-    """Main application window."""
+    """主应用窗口。"""
 
     def __init__(self, parent=None):
         super().__init__(
             parent,
-            title="基金实时估值系统",
-            size=(1100, 700),
+            title="基金实时估值系统 - LOF套利辅助",
+            size=(1300, 750),
         )
 
-        # --- Status bar ---
         self.CreateStatusBar(2)
         self.SetStatusText("就绪", 1)
 
-        # --- Panel & Sizer ---
         panel = wx.Panel(self)
         main_sizer = wx.BoxSizer(wx.VERTICAL)
 
-        # ===== TOOLBAR AREA =====
+        # ===== TOOLBAR =====
         toolbar_panel = wx.Panel(panel)
         tb_sizer = wx.BoxSizer(wx.HORIZONTAL)
 
-        # Label
         lbl = wx.StaticText(toolbar_panel, label="基金代码/名称:")
         tb_sizer.Add(lbl, 0, wx.ALIGN_CENTER_VERTICAL | wx.RIGHT, 5)
 
-        # Input
         self.input_ctrl = wx.TextCtrl(
-            toolbar_panel,
-            size=(200, -1),
-            style=wx.TE_PROCESS_ENTER,
+            toolbar_panel, size=(180, -1), style=wx.TE_PROCESS_ENTER,
         )
         self.input_ctrl.Bind(wx.EVT_TEXT_ENTER, self.on_calculate)
         tb_sizer.Add(self.input_ctrl, 0, wx.ALIGN_CENTER_VERTICAL | wx.RIGHT, 5)
 
-        # Calculate button
         btn_calc = wx.Button(toolbar_panel, label="计 算")
         btn_calc.Bind(wx.EVT_BUTTON, self.on_calculate)
         tb_sizer.Add(btn_calc, 0, wx.ALIGN_CENTER_VERTICAL | wx.RIGHT, 5)
 
-        # Calculate All button
         btn_calc_all = wx.Button(toolbar_panel, label="计算全部")
         btn_calc_all.Bind(wx.EVT_BUTTON, self.on_calculate_all)
-        tb_sizer.Add(btn_calc_all, 0, wx.ALIGN_CENTER_VERTICAL)
+        tb_sizer.Add(btn_calc_all, 0, wx.ALIGN_CENTER_VERTICAL | wx.RIGHT, 10)
+
+        btn_realtime = wx.Button(toolbar_panel, label="实时行情")
+        btn_realtime.Bind(wx.EVT_BUTTON, self.on_realtime_only)
+        tb_sizer.Add(btn_realtime, 0, wx.ALIGN_CENTER_VERTICAL)
 
         toolbar_panel.SetSizer(tb_sizer)
         main_sizer.Add(toolbar_panel, 0, wx.EXPAND | wx.ALL, 5)
 
         # ===== GRID =====
         self.grid = FundGrid(panel)
-        main_sizer.Add(self.grid, 1, wx.EXPAND | wx.ALL | wx.CENTER, 5)
+        main_sizer.Add(self.grid, 1, wx.EXPAND | wx.ALL, 5)
 
-        # ===== BOTTOM STATUS LINE =====
+        # ===== BOTTOM PROGRESS =====
         bottom_panel = wx.Panel(panel)
         bottom_sizer = wx.BoxSizer(wx.HORIZONTAL)
         self.progress_label = wx.StaticText(
-            bottom_panel,
-            label="",
-            style=wx.ST_ELLIPSIZE_MIDDLE,
+            bottom_panel, label="", style=wx.ST_ELLIPSIZE_MIDDLE,
         )
         bottom_sizer.Add(self.progress_label, 1, wx.ALIGN_CENTER_VERTICAL | wx.ALL, 3)
         bottom_panel.SetSizer(bottom_sizer)
@@ -134,7 +174,7 @@ class MainFrame(wx.Frame):
         menubar = wx.MenuBar()
 
         file_menu = wx.Menu()
-        refresh_item = file_menu.Append(wx.ID_REFRESH, "刷新(&R)\tF5", "重新加载表格数据")
+        refresh_item = file_menu.Append(wx.ID_REFRESH, "刷新(&R)\tF5", "获取全部基金实时行情")
         exit_item = file_menu.Append(wx.ID_EXIT, "退出(&X)")
         menubar.Append(file_menu, "文件(&F)")
         self.Bind(wx.EVT_MENU, self.on_refresh, refresh_item)
@@ -146,11 +186,9 @@ class MainFrame(wx.Frame):
         self.Bind(wx.EVT_MENU, self.on_about, about_item)
 
         self.SetMenuBar(menubar)
-
-        # Bind keyboard shortcut
         self.Bind(wx.EVT_KEY_DOWN, self.on_key_down)
 
-    # ---- Event Handlers ----
+    # ---- Events ----
 
     def on_key_down(self, event):
         if event.GetKeyCode() == wx.WXK_F5:
@@ -161,23 +199,18 @@ class MainFrame(wx.Frame):
     def on_exit(self, event):
         self.Close(True)
 
-    def on_refresh(self, event):
-        """Reload the grid with all funds from DB (basic info only)."""
-        self.status_bar_set("正在加载...")
-        wx.Yield()
-        funds = self._fetch_all_funds()
-        if not funds:
-            self.status_bar_set("数据库中无基金数据")
-            return
-        self.grid.clear_and_add(funds)
-        self.status_bar_set(f"已加载 {len(funds)} 只基金基本信息")
-
     def on_about(self, event):
         wx.MessageBox(
-            "基金实时估值系统 v1.1\n"
-            "基于 fund_estimator_index_agent\n"
-            "数据来源: 天天基金 / 东方财富 / 新浪财经实时行情\n"
-            "估值日期: {}".format(datetime.now().strftime("%Y-%m-%d")),
+            "基金实时估值系统 v2.0\n"
+            "功能: 估算净值 + 场内价格 + 溢价率/折价率\n"
+            "数据来源:\n"
+            "  场内价格: 腾讯行情 (qt.gtimg.cn)\n"
+            "  估算净值: 天天基金 (fundgz.1234567.com.cn)\n"
+            "  估值算法: fund_estimator_index_agent\n"
+            "套利逻辑:\n"
+            "  溢价率 > +1% → 溢价卖出 (申购→转场内→卖出)\n"
+            "  溢价率 < -1% → 折价买入 (买入→转场内→赎回)\n"
+            "{}".format(datetime.now().strftime("%Y-%m-%d")),
             "关于",
             wx.OK | wx.ICON_INFORMATION,
             self,
@@ -194,11 +227,7 @@ class MainFrame(wx.Frame):
     # ---- Fund Lookup ----
 
     def find_fund_code(self, query):
-        """
-        Return (fund_code, fund_name) tuple, or None.
-        If query is 6-digit number, treat as code directly.
-        Otherwise search by name/pinyin/full_name in DB.
-        """
+        """返回 (fund_code, fund_name) 或 None。"""
         query = query.strip()
         if not query:
             return None
@@ -206,7 +235,6 @@ class MainFrame(wx.Frame):
         conn = sqlite3.connect(_DB_PATH)
         cursor = conn.cursor()
 
-        # Try exact code match first
         if len(query) == 6 and query.isdigit():
             cursor.execute(
                 "SELECT fund_code, fund_name FROM master_lof WHERE fund_code = ?",
@@ -218,7 +246,6 @@ class MainFrame(wx.Frame):
                 return row
             return None
 
-        # Search by name, full_name, pinyin (partial match)
         cursor.execute(
             "SELECT fund_code, fund_name FROM master_lof "
             "WHERE fund_name LIKE ? OR full_name LIKE ? OR pinyin LIKE ? "
@@ -233,7 +260,6 @@ class MainFrame(wx.Frame):
         if len(rows) == 1:
             return rows[0]
 
-        # Multiple matches: show dialog
         choices = [f"{code}  {name}" for code, name in rows]
         dlg = wx.SingleChoiceDialog(
             self,
@@ -243,12 +269,11 @@ class MainFrame(wx.Frame):
         )
         if dlg.ShowModal() == wx.ID_OK:
             sel = dlg.GetStringSelection()
-            code = sel.split()[0]
-            name = sel.split(" ", 1)[1] if " " in sel else ""
-            return (code, name)
+            parts = sel.split(" ", 1)
+            return (parts[0], parts[1] if len(parts) > 1 else "")
         return None
 
-    # ---- Calculation ----
+    # ---- Single Fund Calculation ----
 
     def on_calculate(self, event):
         query = self.input_ctrl.GetValue().strip()
@@ -266,58 +291,160 @@ class MainFrame(wx.Frame):
         self.status_bar_set(f"正在计算 {fund_code} {fund_name} ...")
         wx.Yield()
 
+        # 1) 获取场内实时价格 + 估算净值 + 溢价率
+        snapshot = fetch_fund_snapshot(fund_code)
+
+        # 2) 同时用 fund_estimator 计算 T-1 基准净值
         today = datetime.now().strftime("%Y-%m-%d")
+        t1_nav = ""
+        est_method = ""
         try:
             est_result = estimate_realtime(fund_code, today)
-        except Exception as e:
-            wx.MessageBox(f"计算出错: {e}", "错误", wx.OK | wx.ICON_ERROR, self)
-            self.status_bar_set("计算出错")
-            return
+            if est_result.get("success"):
+                t1_nav = f"{est_result.get('t1_nav', 0):.4f}"
+                est_method = est_result.get("method_used") or est_result.get("method", "")
+        except Exception:
+            pass
 
-        # Build row data
+        # 3) 构建行数据
         row_data = {
             "fund_code": fund_code,
             "fund_name": fund_name,
-            "est_nav": "",
-            "est_change": "",
-            "t1_nav": "",
-            "method": "",
-            "status": "",
+            "intraday_price": f'{snapshot.get("intraday_price", 0):.4f}',
+            "intraday_change": f'{snapshot.get("intraday_change_pct", 0):.2f}%',
+            "est_nav": f'{snapshot.get("estimated_nav", 0):.4f}',
+            "est_change": f'{snapshot.get("estimate_change_pct", 0):.2f}%',
+            "premium_pct": f'{snapshot.get("premium_pct", 0):.2f}',
+            "signal": snapshot.get("signal", ""),
+            "status": f"T-1:{t1_nav}" + (f" {est_method}" if est_method else ""),
         }
 
-        if est_result.get("success"):
-            row_data["est_nav"] = f"{est_result.get('estimated_nav', 0):.4f}"
-            row_data["est_change"] = f"{est_result.get('estimated_change_pct', 0):.2f}%"
-            row_data["t1_nav"] = f"{est_result.get('t1_nav', 0):.4f}"
-            method = est_result.get("method_used") or est_result.get("method", "")
-            row_data["method"] = method
-            row_data["status"] = "成功"
-            self.status_bar_set(
-                f"{fund_code} {fund_name} 估算净值: {row_data['est_nav']}  涨幅: {row_data['est_change']}"
-            )
-        else:
-            err_msg = est_result.get("error", "未知错误")
-            row_data["status"] = f"失败: {err_msg[:20]}"
-            self.status_bar_set(f"计算失败: {err_msg}")
-
-        # Refresh grid
         self.grid.clear_and_add([row_data])
 
-    def on_calculate_all(self, event):
+        sig = snapshot.get("signal", "")
+        prem = snapshot.get("premium_pct", 0)
+        self.status_bar_set(
+            f"{fund_code} {fund_name} | 场内: {row_data['intraday_price']} | "
+            f"估算: {row_data['est_nav']} | 溢价: {row_data['premium_pct']}% | {sig}"
+        )
+
+    # ---- Real-time only (no fund_estimator, fast batch) ----
+
+    def on_realtime_only(self, event):
+        """仅获取场内价格 + 天天基金估算，快速计算溢价率。"""
+        query = self.input_ctrl.GetValue().strip()
+
+        if not query:
+            # 无输入: 对所有 LOF 做快照
+            self._batch_realtime_all()
+        else:
+            # 有输入: 单只基金
+            result = self.find_fund_code(query)
+            if not result:
+                wx.MessageBox(f"未找到: {query}", "错误", wx.OK | wx.ICON_ERROR, self)
+                return
+            fund_code, fund_name = result
+            self.status_bar_set(f"获取 {fund_code} {fund_name} 实时行情...")
+            wx.Yield()
+            snapshot = fetch_fund_snapshot(fund_code)
+            row_data = {
+                "fund_code": fund_code,
+                "fund_name": fund_name,
+                "intraday_price": f'{snapshot.get("intraday_price", 0):.4f}',
+                "intraday_change": f'{snapshot.get("intraday_change_pct", 0):.2f}%',
+                "est_nav": f'{snapshot.get("estimated_nav", 0):.4f}',
+                "est_change": f'{snapshot.get("estimate_change_pct", 0):.2f}%',
+                "premium_pct": f'{snapshot.get("premium_pct", 0):.2f}',
+                "signal": snapshot.get("signal", ""),
+                "status": "实时",
+            }
+            self.grid.clear_and_add([row_data])
+            self.status_bar_set(
+                f"{fund_code} | 场内: {row_data['intraday_price']} | "
+                f"溢价: {row_data['premium_pct']}% | {row_data['signal']}"
+            )
+
+    def _batch_realtime_all(self):
+        """批量获取全部 LOF 的实时行情快照。"""
         self.status_bar_set("正在获取基金列表...")
         wx.Yield()
 
         funds = self._fetch_all_funds_basic()
         if not funds:
             wx.MessageBox("数据库中无基金数据", "错误", wx.OK | wx.ICON_ERROR, self)
-            self.status_bar_set("无数据")
+            return
+
+        total = len(funds)
+        self.status_bar_set(f"共 {total} 只基金，开始获取实时行情...")
+        wx.MessageBox(
+            f"将对 {total} 只基金获取实时行情和估算净值，\n"
+            "此过程可能需要几分钟，请耐心等待。\n"
+            "是否继续？",
+            "确认批量获取",
+            wx.YES_NO | wx.ICON_QUESTION,
+            self,
+        )
+        if not self.IsYes():
+            self.status_bar_set("已取消")
+            return
+
+        fund_codes = [f[0] for f in funds]
+        fund_names = {f[0]: f[1] for f in funds}
+
+        snapshots = fetch_all_fund_snapshots(fund_codes)
+
+        self.grid.clear_and_add([])
+        self.grid.AppendRows(len(snapshots))
+
+        success_count = 0
+        fail_count = 0
+
+        for i, snap in enumerate(snapshots):
+            self.progress_set(f"进度: {i + 1}/{total}  [{snap.get('fund_code', '')}]")
+
+            code = snap.get("fund_code", fund_codes[i] if i < len(fund_codes) else "")
+            name = snap.get("fund_name", fund_names.get(code, ""))
+
+            row_data = {
+                "fund_code": code,
+                "fund_name": name,
+                "intraday_price": f'{snap.get("intraday_price", 0):.4f}',
+                "intraday_change": f'{snap.get("intraday_change_pct", 0):.2f}%',
+                "est_nav": f'{snap.get("estimated_nav", 0):.4f}',
+                "est_change": f'{snap.get("estimate_change_pct", 0):.2f}%',
+                "premium_pct": f'{snap.get("premium_pct", 0):.2f}',
+                "signal": snap.get("signal", ""),
+                "status": "OK" if "error" not in snap else "数据不足",
+            }
+            self.grid.append_row(i, row_data)
+
+            if "error" not in snap:
+                success_count += 1
+            else:
+                fail_count += 1
+
+        self.progress_set("")
+        self.status_bar_set(
+            f"完成! 成功: {success_count}, 失败: {fail_count}, 总计: {total}"
+        )
+
+    # ---- Full batch (estimate_realtime + realtime) ----
+
+    def on_calculate_all(self, event):
+        """批量估值计算 (fund_estimator + 场内价格)。"""
+        self.status_bar_set("正在获取基金列表...")
+        wx.Yield()
+
+        funds = self._fetch_all_funds_basic()
+        if not funds:
+            wx.MessageBox("数据库中无基金数据", "错误", wx.OK | wx.ICON_ERROR, self)
             return
 
         total = len(funds)
         self.status_bar_set(f"共 {total} 只基金，开始批量计算...")
         wx.MessageBox(
             f"将对 {total} 只基金进行批量估值计算，\n"
-            "此过程可能需要较长时间，请耐心等待。\n"
+            "此过程较慢，请耐心等待。\n"
             "是否继续？",
             "确认批量计算",
             wx.YES_NO | wx.ICON_QUESTION,
@@ -338,37 +465,39 @@ class MainFrame(wx.Frame):
             self.progress_set(f"进度: {i + 1}/{total}  [{fund_code}]")
 
             try:
+                # 1) 获取场内 + 估算快照
+                snapshot = fetch_fund_snapshot(fund_code)
+
+                # 2) fund_estimator 估值
                 est_result = estimate_realtime(fund_code, today)
+
+                t1_nav = ""
+                est_method = ""
+                if est_result.get("success"):
+                    t1_nav = f"{est_result.get('t1_nav', 0):.4f}"
+                    est_method = est_result.get("method_used") or est_result.get("method", "")
+                    success_count += 1
+                else:
+                    fail_count += 1
+
                 row_data = {
                     "fund_code": fund_code,
                     "fund_name": fund_name,
-                    "est_nav": "",
-                    "est_change": "",
-                    "t1_nav": "",
-                    "method": "",
-                    "status": "",
+                    "intraday_price": f'{snapshot.get("intraday_price", 0):.4f}',
+                    "intraday_change": f'{snapshot.get("intraday_change_pct", 0):.2f}%',
+                    "est_nav": f'{snapshot.get("estimated_nav", 0):.4f}',
+                    "est_change": f'{snapshot.get("estimate_change_pct", 0):.2f}%',
+                    "premium_pct": f'{snapshot.get("premium_pct", 0):.2f}',
+                    "signal": snapshot.get("signal", ""),
+                    "status": f"T-1:{t1_nav}" + (f" {est_method}" if est_method else "失败"),
                 }
-
-                if est_result.get("success"):
-                    row_data["est_nav"] = f"{est_result.get('estimated_nav', 0):.4f}"
-                    row_data["est_change"] = f"{est_result.get('estimated_change_pct', 0):.2f}%"
-                    row_data["t1_nav"] = f"{est_result.get('t1_nav', 0):.4f}"
-                    method = est_result.get("method_used") or est_result.get("method", "")
-                    row_data["method"] = method
-                    row_data["status"] = "成功"
-                    success_count += 1
-                else:
-                    err_msg = est_result.get("error", "未知错误")
-                    row_data["status"] = f"失败: {err_msg[:15]}"
-                    fail_count += 1
-
                 self.grid.append_row(i, row_data)
 
             except Exception as e:
                 row_data = {
                     "fund_code": fund_code,
                     "fund_name": fund_name,
-                    "status": f"异常: {str(e)[:10]}",
+                    "status": f"异常: {str(e)[:8]}",
                 }
                 self.grid.append_row(i, row_data)
                 fail_count += 1
@@ -381,7 +510,7 @@ class MainFrame(wx.Frame):
     # ---- DB Helpers ----
 
     def _fetch_all_funds_basic(self):
-        """Return list of (fund_code, fund_name) from master_lof."""
+        """返回 [(fund_code, fund_name), ...]"""
         conn = sqlite3.connect(_DB_PATH)
         cursor = conn.cursor()
         cursor.execute("SELECT fund_code, fund_name FROM master_lof ORDER BY fund_code")
@@ -389,30 +518,14 @@ class MainFrame(wx.Frame):
         conn.close()
         return rows
 
-    def _fetch_all_funds(self):
-        """Return list of dicts with basic info for grid display (no estimation)."""
-        conn = sqlite3.connect(_DB_PATH)
-        cursor = conn.cursor()
-        cursor.execute(
-            "SELECT fund_code, fund_name, fund_type, is_index_fund, tracker_index "
-            "FROM master_lof ORDER BY fund_code"
-        )
-        rows = cursor.fetchall()
-        conn.close()
+    def on_refresh(self, event):
+        """F5 快捷刷新: 获取全部实时行情。"""
+        self.on_realtime_only(event)
 
-        result = []
-        for code, name, ftype, is_idx, tracker in rows:
-            result.append({
-                "fund_code": code,
-                "fund_name": name,
-                "est_nav": "",
-                "est_change": "",
-                "t1_nav": "",
-                "method": f"{ftype}{'(指数)' if is_idx else ''}" + (f"→{tracker}" if tracker else ""),
-                "status": "基本信息",
-            })
-        return result
 
+# ====================================================================
+# App Entry
+# ====================================================================
 
 class FundValuationApp(wx.App):
     def OnInit(self):
