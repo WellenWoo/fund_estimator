@@ -71,10 +71,10 @@ class FundGrid(wx.grid.Grid):
         self.EnableEditing(False)
         self.SetRowLabelSize(0)
 
-        # 颜色：溢价率正数红色，负数绿色
-        self.red_brush = wx.Brush(wx.Colour(255, 240, 240))
-        self.green_brush = wx.Brush(wx.Colour(240, 255, 240))
-        self.white_brush = wx.Brush(wx.WHITE)
+        # 颜色：溢价率正数红色背景，负数绿色背景
+        self.red_colour = wx.Colour(255, 240, 240)
+        self.green_colour = wx.Colour(240, 255, 240)
+        self.white_colour = wx.WHITE
 
     def _color_cell(self, row, col, value_str):
         """对溢价率列着色。"""
@@ -82,13 +82,13 @@ class FundGrid(wx.grid.Grid):
             try:
                 v = float(value_str)
                 if v > 0:
-                    self.SetCellBackgroundColour(row, col, self.red_brush)
+                    self.SetCellBackgroundColour(row, col, self.red_colour)
                 elif v < 0:
-                    self.SetCellBackgroundColour(row, col, self.green_brush)
+                    self.SetCellBackgroundColour(row, col, self.green_colour)
                 else:
-                    self.SetCellBackgroundColour(row, col, self.white_brush)
+                    self.SetCellBackgroundColour(row, col, self.white_colour)
             except (ValueError, TypeError):
-                self.SetCellBackgroundColour(row, col, self.white_brush)
+                self.SetCellBackgroundColour(row, col, self.white_colour)
 
     def append_row(self, row_idx, data_dict):
         """写入一行数据。"""
