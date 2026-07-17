@@ -1,0 +1,2 @@
+# Beeware / Toga dependencies for LOF Fund Valuation GUI
+toga>=0.5.0
