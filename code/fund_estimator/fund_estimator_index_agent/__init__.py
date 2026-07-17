@@ -555,6 +555,112 @@ def select_estimation_method(fund_info: FundInfo) -> tuple[str, str]:
 # 3. Real-time Estimation Engine
 # ---------------------------------------------------------------------------
 
+
+def _resolve_index_symbol(fund_info) -> Optional[str]:
+    """根据基金信息解析需要跟踪的指数代码（如 sz399006）。"""
+    tracker_code = getattr(fund_info, 'tracker_index_code', '') or ''
+    if not tracker_code:
+        return None
+
+    # 使用已有的 INDEX_SYMBOL_MAP 解析
+    for keyword, (sym_code, prefix) in INDEX_SYMBOL_MAP.items():
+        if keyword in tracker_code or tracker_code in keyword:
+            return f"{prefix}{sym_code}"
+
+    # 直接推断
+    if len(tracker_code) == 6:
+        if tracker_code.startswith("399"):
+            return f"sz{tracker_code}"
+        if tracker_code.startswith("000"):
+            return f"sh{tracker_code}"
+        if tracker_code.startswith("930"):
+            return f"cn{tracker_code}"
+        return f"sh{tracker_code}"
+    return None
+
+
+def _fetch_realtime_index_for_fund(fund_info, inputs) -> Optional[float]:
+    """获取基金跟踪指数的实时涨跌幅（%）。
+
+    Returns
+    -------
+    float or None
+        指数实时涨跌幅百分比，如 -4.5 表示跌 4.5%
+    """
+    from fund_estimator.data_sources.sina.realtime import fetch_realtime
+
+    # 优先使用 fund_info 中的 tracker_index_code
+    symbol = _resolve_index_symbol(fund_info)
+
+    # 如果 fund_info 没有，尝试从 inputs 的 index_close 中找最近的指数
+    if not symbol:
+        # 尝试常见指数
+        symbol = "sz399006"  # 默认创业板指（很多 LOF 跟踪此指数）
+
+    try:
+        quotes = fetch_realtime([symbol])
+        if symbol in quotes:
+            q = quotes[symbol]
+            if q.prev_close and q.prev_close > 0:
+                change_pct = (q.price - q.prev_close) / q.prev_close * 100.0
+                return round(change_pct, 4)
+    except RuntimeError:
+        pass
+
+    return None
+
+
+def _estimate_with_realtime_index(inputs, today, method, index_change_pct, fund_info):
+    """使用实时指数涨跌幅重新执行估值估算。"""
+    from fund_estimator.backtest.run_backtest import _prev_trading_day, NAVComparison
+    from fund_estimator.core.models import RealtimeQuote
+    from fund_estimator.estimators.holdings_based import estimate as est_fn
+
+    # T-1 使用最新可用交易日
+    latest_date = max(inputs.nav_map.keys())
+    t1 = latest_date
+    t1_nav = inputs.nav_map[t1]
+    if not t1_nav:
+        return None
+
+    # 构造实时 quote
+    quotes_today = {}
+    quotes_t1 = {}
+    symbol = _resolve_index_symbol(fund_info)
+
+    # 尝试获取实时指数 quote
+    if symbol:
+        try:
+            from fund_estimator.data_sources.sina.realtime import fetch_realtime
+            quotes_idx = fetch_realtime([symbol])
+            if symbol in quotes_idx:
+                q = quotes_idx[symbol]
+                quotes_today[symbol] = RealtimeQuote(
+                    code=symbol, price=q.price, prev_close=q.prev_close,
+                    open=q.open, high=q.high, low=q.low,
+                )
+        except RuntimeError:
+            pass
+
+    est = est_fn(
+        method,
+        fund_code=inputs.fund_code,
+        today=today,
+        t1_date=t1,
+        t1_nav=t1_nav,
+        index_change_pct=index_change_pct,
+        holdings=inputs.holdings,
+        quotes_today=quotes_today,
+        quotes_t1=quotes_t1,
+    )
+
+    return NAVComparison(
+        estimate=est,
+        official_nav=None,  # 实时模式无官方 NAV
+        official_change_pct=None,
+    )
+
+
 def estimate_realtime(
     fund_code: str,
     trade_date: str,
@@ -603,23 +709,32 @@ def estimate_realtime(
 
     try:
         need_stocks = method in ("v_top10", "v_index_blend", "v_residual_uncovered")
+        # 实时估值时强制刷新数据，确保获取最新的指数和持仓信息
         inputs = load_common_inputs(
             fund_code, start_date, trade_date,
             with_holdings=True, with_stocks=need_stocks,
-            cache=cache, force=force,
+            cache=cache, force=True,
         )
-        comp = estimate_for_day(inputs, trade_date, method)
+        comp = estimate_for_day(inputs, trade_date, method, realtime=True)
 
         if comp is None:
-            return {
-                "success": False,
-                "fund_code": fund_code,
-                "trade_date": trade_date,
-                "error": f"{trade_date} 非交易日或数据缺失，无法估值",
-                "fund_info": fund_info.to_dict(),
-                "method_used": method,
-                "method_reason": reason,
-            }
+            # 实时估值重试：尝试获取实时指数行情数据
+            realtime_index_pct = _fetch_realtime_index_for_fund(fund_info, inputs)
+            if realtime_index_pct is not None:
+                comp = _estimate_with_realtime_index(
+                    inputs, trade_date, method, realtime_index_pct, fund_info
+                )
+
+            if comp is None:
+                return {
+                    "success": False,
+                    "fund_code": fund_code,
+                    "trade_date": trade_date,
+                    "error": f"{trade_date} 非交易日或数据缺失，无法估值",
+                    "fund_info": fund_info.to_dict(),
+                    "method_used": method,
+                    "method_reason": reason,
+                }
 
         est = comp.estimate
         result = {
@@ -631,6 +746,7 @@ def estimate_realtime(
             "estimated_nav": est.estimated_nav,
             "estimated_change_pct": est.estimated_change_pct,
             "method": est.method,
+            "method_used": est.method,
             "method_reason": reason,
             "fund_info": fund_info.to_dict(),
             "detail": est.detail,

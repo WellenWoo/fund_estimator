@@ -136,16 +136,33 @@ def estimate_for_day(
     inputs: CommonInputs,
     today: str,
     method: str,
+    realtime: bool = False,
 ) -> Optional[NAVComparison]:
-    """对单个交易日做估值 + 对比。非交易日 / 数据缺失返回 None。"""
+    """对单个交易日做估值 + 对比。非交易日 / 数据缺失返回 None。
+
+    Parameters
+    ----------
+    realtime : 实时估值模式。为 True 时，即使 today 不在 nav_map 中
+               （当天 NAV 尚未公布），也使用最新可用 NAV 作为 T-1 进行估算。
+    """
+    t1 = None
+    t1_nav = None
+
     if today not in inputs.nav_map:
-        return None  # 非交易日（无 NAV）
-    t1 = _prev_trading_day(inputs.trading_days, today)
-    if not t1:
-        return None
-    t1_nav = inputs.nav_map.get(t1)
-    if not t1_nav:
-        return None
+        if realtime and inputs.nav_map:
+            # 实时估值：当天 NAV 未公布，用最后一个可用交易日作为 T-1
+            latest_date = max(inputs.nav_map.keys())
+            t1 = latest_date
+            t1_nav = inputs.nav_map[t1]
+        else:
+            return None  # 非交易日（无 NAV）
+    else:
+        t1 = _prev_trading_day(inputs.trading_days, today)
+        if not t1:
+            return None
+        t1_nav = inputs.nav_map.get(t1)
+        if not t1_nav:
+            return None
 
     # 指数涨跌%
     idx_today = inputs.index_close.get(today)
@@ -153,6 +170,11 @@ def estimate_for_day(
     index_change_pct = None
     if idx_today and idx_t1 and idx_t1 > 0:
         index_change_pct = (idx_today - idx_t1) / idx_t1 * 100.0
+    elif realtime and idx_t1 and idx_t1 > 0:
+        # 实时模式：当天指数数据缺失，保留 index_change_pct 为 None
+        # 让 estimate_realtime 中的实时指数回退逻辑来处理
+        # index_change_pct 保持为 None
+        pass
 
     # index 系算法在缺指数时无法估
     if method in ("v_index_full", "v_index_full_no_cash", "v_index_blend") and index_change_pct is None:
