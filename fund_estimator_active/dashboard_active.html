@@ -1,0 +1,69 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>主动基金 160211 估值 Dashboard</title>
+<style>
+body { font-family: -apple-system, system-ui, sans-serif; background: #f7f7fb; margin: 0; padding: 24px; }
+h1 { color: #1a1a1a; }
+.cards { display: flex; gap: 16px; flex-wrap: wrap; }
+.card { background: white; border-radius: 8px; padding: 16px 20px; min-width: 220px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
+.card .label { color: #666; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; }
+.card .value { font-size: 28px; font-weight: 600; margin-top: 4px; color: #1a1a1a; }
+table { background: white; border-collapse: collapse; width: 100%; max-width: 980px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
+th, td { padding: 10px 14px; text-align: left; border-bottom: 1px solid #eee; }
+th { background: #f0f0f5; font-weight: 600; color: #444; }
+.badge { background: #22c55e; color: white; padding: 2px 8px; border-radius: 12px; font-size: 12px; }
+.timeline { background: white; border-radius: 8px; padding: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); max-width: 980px; margin-top: 24px; }
+.row { display: flex; gap: 8px; align-items: center; padding: 4px 0; font-size: 13px; }
+.date { width: 100px; color: #666; }
+.err-bar { height: 8px; background: #3b82f6; border-radius: 4px; }
+.err-num { width: 80px; text-align: right; color: #444; }
+</style></head>
+<body>
+<h1>主动基金估值 Dashboard</h1>
+<p>标的: 160211 国泰中小盘成长混合(LOF) | 数据: 东方财富 + 新浪 + 天天基金</p>
+<div class="cards">
+
+<div class="card"><div class="label">当前最佳方法</div><div class="value">v_active_bench_csi1000</div></div>
+<div class="card"><div class="label">MAE</div><div class="value">0.7099 pp</div></div>
+<div class="card"><div class="label">样本数</div><div class="value">55</div></div>
+<div class="card"><div class="label">超阈值</div><div class="value">33/55</div></div>
+</div>
+<h2>多算法对比</h2>
+<table>
+<tr><th>方法</th><th>N</th><th>MAE (pp)</th><th>超阈值</th></tr>
+
+<tr><td>v_active_bench_csi1000 <span class="badge">BEST</span></td><td>55</td><td>0.7099</td><td>33/55</td></tr>
+<tr><td>v_active_top10_blend </td><td>55</td><td>0.7936</td><td>35/55</td></tr>
+</table>
+<div class="timeline"><h2>每日误差 (v_active_bench_csi1000)</h2>
+<div class="row"><span class="date">2026-06-04</span><span class="err-bar" style="width:47.88105320971585px"></span><span class="err-num">0.0599pp</span></div>
+<div class="row"><span class="date">2026-06-05</span><span class="err-bar" style="width:400px"></span><span class="err-num">1.5511pp</span></div>
+<div class="row"><span class="date">2026-06-08</span><span class="err-bar" style="width:164.06910211456332px"></span><span class="err-num">0.2051pp</span></div>
+<div class="row"><span class="date">2026-06-09</span><span class="err-bar" style="width:376.84472846203306px"></span><span class="err-num">0.4711pp</span></div>
+<div class="row"><span class="date">2026-06-10</span><span class="err-bar" style="width:374.3366026580931px"></span><span class="err-num">0.4679pp</span></div>
+<div class="row"><span class="date">2026-06-11</span><span class="err-bar" style="width:400px"></span><span class="err-num">1.6169pp</span></div>
+<div class="row"><span class="date">2026-06-12</span><span class="err-bar" style="width:400px"></span><span class="err-num">0.7804pp</span></div>
+<div class="row"><span class="date">2026-06-15</span><span class="err-bar" style="width:400px"></span><span class="err-num">1.0642pp</span></div>
+<div class="row"><span class="date">2026-06-16</span><span class="err-bar" style="width:400px"></span><span class="err-num">0.5395pp</span></div>
+<div class="row"><span class="date">2026-06-17</span><span class="err-bar" style="width:87.70855640945379px"></span><span class="err-num">0.1096pp</span></div>
+<div class="row"><span class="date">2026-06-18</span><span class="err-bar" style="width:0.6443016628701783px"></span><span class="err-num">0.0008pp</span></div>
+<div class="row"><span class="date">2026-06-22</span><span class="err-bar" style="width:400px"></span><span class="err-num">0.6301pp</span></div>
+<div class="row"><span class="date">2026-06-23</span><span class="err-bar" style="width:400px"></span><span class="err-num">0.7356pp</span></div>
+<div class="row"><span class="date">2026-06-24</span><span class="err-bar" style="width:400px"></span><span class="err-num">0.5696pp</span></div>
+<div class="row"><span class="date">2026-06-25</span><span class="err-bar" style="width:400px"></span><span class="err-num">0.5726pp</span></div>
+<div class="row"><span class="date">2026-06-26</span><span class="err-bar" style="width:102.27558580406388px"></span><span class="err-num">0.1278pp</span></div>
+<div class="row"><span class="date">2026-06-29</span><span class="err-bar" style="width:400px"></span><span class="err-num">0.5741pp</span></div>
+<div class="row"><span class="date">2026-06-30</span><span class="err-bar" style="width:400px"></span><span class="err-num">0.5994pp</span></div>
+<div class="row"><span class="date">2026-07-01</span><span class="err-bar" style="width:400px"></span><span class="err-num">2.7982pp</span></div>
+<div class="row"><span class="date">2026-07-02</span><span class="err-bar" style="width:400px"></span><span class="err-num">1.7038pp</span></div>
+<div class="row"><span class="date">2026-07-03</span><span class="err-bar" style="width:400px"></span><span class="err-num">0.5027pp</span></div>
+<div class="row"><span class="date">2026-07-06</span><span class="err-bar" style="width:400px"></span><span class="err-num">0.6107pp</span></div>
+<div class="row"><span class="date">2026-07-07</span><span class="err-bar" style="width:226.00192639139473px"></span><span class="err-num">0.2825pp</span></div>
+<div class="row"><span class="date">2026-07-08</span><span class="err-bar" style="width:102.13104665792505px"></span><span class="err-num">0.1277pp</span></div>
+<div class="row"><span class="date">2026-07-09</span><span class="err-bar" style="width:214.60202157233743px"></span><span class="err-num">0.2683pp</span></div>
+<div class="row"><span class="date">2026-07-10</span><span class="err-bar" style="width:400px"></span><span class="err-num">1.1862pp</span></div>
+<div class="row"><span class="date">2026-07-13</span><span class="err-bar" style="width:47.20638697644189px"></span><span class="err-num">0.0590pp</span></div>
+<div class="row"><span class="date">2026-07-14</span><span class="err-bar" style="width:400px"></span><span class="err-num">0.8873pp</span></div>
+<div class="row"><span class="date">2026-07-15</span><span class="err-bar" style="width:191.54653917188247px"></span><span class="err-num">0.2394pp</span></div>
+<div class="row"><span class="date">2026-07-16</span><span class="err-bar" style="width:400px"></span><span class="err-num">0.7712pp</span></div>
+</div>
+</body></html>
