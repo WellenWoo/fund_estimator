@@ -1,0 +1,907 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>泉州 4天3晚 完美旅行规划方案</title>
+<style>
+  @page { size: A4; margin: 18mm 16mm 20mm 16mm; }
+  :root {
+    --c-primary: #B33A3A;        /* 闽南红 */
+    --c-primary-dark: #8B1A1A;
+    --c-accent: #E8A33D;          /* 暖黄 */
+    --c-text: #2A2520;
+    --c-muted: #6B6258;
+    --c-bg-soft: #FFF8EE;         /* 米黄底 */
+    --c-bg-card: #FFFDF7;
+    --c-border: #E8DCC4;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    font-family: "PingFang SC", "Microsoft YaHei", "Noto Sans CJK SC", "Source Han Sans SC", sans-serif;
+    color: var(--c-text);
+    font-size: 10.5pt;
+    line-height: 1.65;
+    background: #fff;
+  }
+  h1, h2, h3, h4 { font-weight: 700; color: var(--c-primary-dark); margin: 0; }
+  h1 { font-size: 28pt; letter-spacing: 2px; }
+  h2 { font-size: 18pt; padding: 6px 0 8px 0; border-bottom: 2px solid var(--c-primary); margin-top: 22px; }
+  h3 { font-size: 13pt; margin: 14px 0 6px 0; color: var(--c-primary); }
+  h4 { font-size: 11pt; margin: 10px 0 4px 0; color: var(--c-text); }
+
+  a { color: var(--c-primary); text-decoration: none; }
+
+  /* Cover */
+  .cover {
+    height: 247mm; margin: -18mm -16mm 0 -16mm; padding: 30mm 22mm 30mm 22mm;
+    background: linear-gradient(135deg, #B33A3A 0%, #8B1A1A 100%);
+    color: #FFF8EE; position: relative; page-break-after: always;
+    display: flex; flex-direction: column; justify-content: space-between;
+  }
+  .cover::before {
+    content: ""; position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+    background-image:
+      radial-gradient(circle at 20% 30%, rgba(232,163,61,0.15) 0%, transparent 50%),
+      radial-gradient(circle at 80% 70%, rgba(232,163,61,0.10) 0%, transparent 50%);
+  }
+  .cover-content { position: relative; z-index: 1; }
+  .cover-tag {
+    display: inline-block; padding: 5px 16px; background: rgba(255,248,238,0.18);
+    border: 1px solid rgba(255,248,238,0.4); border-radius: 20px;
+    font-size: 10pt; letter-spacing: 3px; margin-bottom: 28px;
+  }
+  .cover h1 { color: #FFF8EE; font-size: 44pt; line-height: 1.2; margin-bottom: 14px; }
+  .cover .subtitle { font-size: 16pt; color: #E8A33D; letter-spacing: 4px; margin-bottom: 38px; font-weight: 300; }
+  .cover .meta-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px 30px; margin-top: 24px; }
+  .cover .meta-grid div { font-size: 11pt; }
+  .cover .meta-grid b { color: #E8A33D; display: block; font-size: 9pt; letter-spacing: 1.5px; margin-bottom: 2px; }
+  .cover-footer { position: relative; z-index: 1; border-top: 1px solid rgba(255,248,238,0.3); padding-top: 16px; font-size: 9pt; letter-spacing: 1px; }
+  .cover-quote { position: relative; z-index: 1; font-size: 12pt; line-height: 1.7; font-style: italic; opacity: 0.9; border-left: 3px solid #E8A33D; padding-left: 16px; }
+
+  /* TOC */
+  .toc { page-break-after: always; padding-top: 6mm; }
+  .toc h2 { border: none; padding: 0 0 16px 0; }
+  .toc-list { list-style: none; padding: 0; margin: 0; }
+  .toc-list li { display: flex; justify-content: space-between; align-items: baseline; padding: 9px 0; border-bottom: 1px dashed var(--c-border); }
+  .toc-list a { flex: 1; font-size: 11.5pt; color: var(--c-text); }
+  .toc-list .num { width: 32px; color: var(--c-primary); font-weight: 700; }
+  .toc-list .dots { flex: 1; border-bottom: 1px dotted var(--c-border); margin: 0 8px 4px 8px; height: 1px; }
+  .toc-list .page { color: var(--c-muted); font-size: 10pt; font-variant-numeric: tabular-nums; }
+
+  /* Section */
+  section { page-break-inside: avoid; }
+  section + section { page-break-before: auto; }
+
+  /* Hero/intro */
+  .intro-banner {
+    background: var(--c-bg-soft); border-left: 4px solid var(--c-primary);
+    padding: 14px 18px; margin: 14px 0; border-radius: 0 6px 6px 0;
+    font-size: 10.5pt; line-height: 1.7;
+  }
+  .intro-banner b { color: var(--c-primary-dark); }
+
+  /* Image */
+  figure { margin: 14px 0; page-break-inside: avoid; }
+  figure img { width: 100%; height: auto; border-radius: 6px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); display: block; }
+  figcaption { text-align: center; color: var(--c-muted); font-size: 9.5pt; margin-top: 6px; font-style: italic; }
+
+  /* Tables */
+  table { width: 100%; border-collapse: collapse; margin: 10px 0; font-size: 9.8pt; page-break-inside: avoid; }
+  th { background: var(--c-primary); color: #fff8ee; padding: 8px 10px; text-align: left; font-weight: 600; }
+  td { padding: 7px 10px; border-bottom: 1px solid var(--c-border); vertical-align: top; }
+  tr:nth-child(even) td { background: var(--c-bg-soft); }
+  tr:hover td { background: #fef0d8; }
+  .num-col { text-align: right; font-variant-numeric: tabular-nums; }
+
+  /* Day card */
+  .day-card {
+    background: var(--c-bg-card); border: 1px solid var(--c-border);
+    border-radius: 8px; padding: 18px; margin: 16px 0; page-break-inside: avoid;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+  }
+  .day-header { display: flex; justify-content: space-between; align-items: baseline; border-bottom: 2px dashed var(--c-primary); padding-bottom: 8px; margin-bottom: 14px; }
+  .day-header .day-label { font-size: 16pt; color: var(--c-primary); font-weight: 700; }
+  .day-header .day-theme { font-size: 11pt; color: var(--c-muted); letter-spacing: 1.5px; }
+  .day-header .day-date { font-size: 10pt; color: var(--c-muted); }
+  .weather-pill { display: inline-block; padding: 3px 10px; background: #FFF3DC; color: #B8800A; border-radius: 12px; font-size: 9pt; margin-right: 6px; }
+
+  .timeline { list-style: none; padding: 0; margin: 12px 0; }
+  .timeline li { display: grid; grid-template-columns: 56px 20px 1fr; gap: 8px; padding: 6px 0; align-items: start; }
+  .timeline .time { font-weight: 700; color: var(--c-primary); font-size: 10pt; padding-top: 2px; }
+  .timeline .bullet { width: 10px; height: 10px; border-radius: 50%; background: var(--c-primary); margin-top: 6px; box-shadow: 0 0 0 3px rgba(179,58,58,0.15); }
+  .timeline .bullet.food { background: var(--c-accent); box-shadow: 0 0 0 3px rgba(232,163,61,0.2); }
+  .timeline .bullet.hotel { background: #4A6FA5; box-shadow: 0 0 0 3px rgba(74,111,165,0.15); }
+  .timeline .bullet.transport { background: #5A8F6A; box-shadow: 0 0 0 3px rgba(90,143,106,0.15); }
+  .timeline .content { font-size: 10pt; line-height: 1.55; }
+  .timeline .content b { color: var(--c-primary-dark); }
+
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin: 12px 0; }
+  .info-box { background: var(--c-bg-soft); padding: 10px 14px; border-radius: 6px; font-size: 9.5pt; line-height: 1.55; }
+  .info-box h4 { color: var(--c-primary); margin-bottom: 4px; font-size: 10pt; }
+  .info-box ul { padding-left: 18px; margin: 4px 0; }
+
+  .budget-day { background: #FBF7F0; padding: 8px 12px; border-radius: 4px; font-size: 9.5pt; margin-top: 10px; display: flex; justify-content: space-between; }
+  .budget-day b { color: var(--c-primary); }
+
+  .map-link { display: inline-block; padding: 5px 12px; background: var(--c-primary); color: #fff8ee !important; border-radius: 14px; font-size: 9pt; margin-top: 4px; }
+  .map-link::before { content: "📍 "; }
+
+  .tip { background: #FFFBE8; border-left: 3px solid #E8A33D; padding: 8px 12px; margin: 8px 0; font-size: 9.5pt; border-radius: 0 4px 4px 0; }
+  .tip b { color: #B8800A; }
+
+  .highlight { background: linear-gradient(transparent 60%, rgba(232,163,61,0.4) 60%); padding: 0 2px; }
+
+  /* Food list */
+  .food-item { padding: 8px 12px; border-bottom: 1px dashed var(--c-border); }
+  .food-item:last-child { border-bottom: none; }
+  .food-item b { color: var(--c-primary); }
+
+  /* Activity */
+  .activity-card { background: linear-gradient(135deg, #FFF8EE, #FFF3DC); border: 1px solid #E8A33D; border-radius: 8px; padding: 14px; margin: 10px 0; }
+  .activity-card h4 { color: #B8800A; }
+
+  /* Page break helpers */
+  .page-break { page-break-before: always; }
+
+  /* Footer */
+  .doc-footer { text-align: center; color: var(--c-muted); font-size: 8.5pt; margin-top: 30px; padding-top: 10px; border-top: 1px solid var(--c-border); }
+
+  /* Stat row */
+  .stat-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin: 14px 0; }
+  .stat-box { background: var(--c-bg-soft); border-left: 3px solid var(--c-primary); padding: 10px 14px; border-radius: 0 4px 4px 0; }
+  .stat-box .num { font-size: 20pt; color: var(--c-primary); font-weight: 700; line-height: 1; }
+  .stat-box .label { font-size: 8.5pt; color: var(--c-muted); letter-spacing: 1px; margin-top: 2px; }
+
+  .legend-row { display: flex; gap: 14px; flex-wrap: wrap; margin: 8px 0; font-size: 9.5pt; }
+  .legend-row span { display: inline-flex; align-items: center; gap: 5px; }
+  .legend-row i { display: inline-block; width: 14px; height: 4px; border-radius: 2px; }
+
+</style>
+</head>
+<body>
+
+<!-- ============== COVER ============== -->
+<div class="cover">
+  <div class="cover-content">
+    <div class="cover-tag">✦ 私人定制旅行方案</div>
+    <h1>泉州 4日游</h1>
+    <div class="subtitle">半城煙火半城仙 · 海絲遺韻</div>
+
+    <div class="meta-grid">
+      <div><b>出发日期</b>2026.07.31（周四）</div>
+      <div><b>返程日期</b>2026.08.03（周日）</div>
+      <div><b>行程天数</b>4 天 3 晚</div>
+      <div><b>出发地</b>广东 东莞</div>
+      <div><b>目的地</b>福建 泉州</div>
+      <div><b>往返交通</b>高铁 G924 / D3xxx</div>
+      <div><b>出行人数</b>2 人（按情侣/伙伴）</div>
+      <div><b>预算方案</b>舒适型 · 人均 ¥2400</div>
+    </div>
+  </div>
+
+  <div class="cover-quote">
+    "此地古称佛国，满街都是圣人。"<br>
+    ——朱熹 · 800 年前对泉州的赞叹
+  </div>
+
+  <div class="cover-footer">
+    <div>📅 方案制作日期：2026 年 7 月</div>
+    <div style="margin-top:6px;">🗺️ 含 5 张可视化行程路线图 · 一图看懂全程</div>
+    <div style="margin-top:6px;">✨ Mavis · 30 年环球旅行经验顶级规划师</div>
+  </div>
+</div>
+
+<!-- ============== TOC ============== -->
+<div class="toc">
+  <h2>📑 目录</h2>
+  <ul class="toc-list">
+    <li><a href="#sec-overview"><span class="num">01</span><span>行程总览 · 一图看懂全程</span></a><span class="dots"></span><span class="page">P.3</span></li>
+    <li><a href="#sec-weather"><span class="num">02</span><span>天气与穿搭建议</span></a><span class="dots"></span><span class="page">P.4</span></li>
+    <li><a href="#sec-events"><span class="num">03</span><span>8 月当地活动 & 演出推荐</span></a><span class="dots"></span><span class="page">P.5</span></li>
+    <li><a href="#sec-day1"><span class="num">04</span><span>Day 1 · 7/31 古城初印象</span></a><span class="dots"></span><span class="page">P.6</span></li>
+    <li><a href="#sec-day2"><span class="num">05</span><span>Day 2 · 8/1 山水胜迹</span></a><span class="dots"></span><span class="page">P.8</span></li>
+    <li><a href="#sec-day3"><span class="num">06</span><span>Day 3 · 8/2 海丝遗韵</span></a><span class="dots"></span><span class="page">P.10</span></li>
+    <li><a href="#sec-day4"><span class="num">07</span><span>Day 4 · 8/3 天后宫·返程</span></a><span class="dots"></span><span class="page">P.12</span></li>
+    <li><a href="#sec-stay"><span class="num">08</span><span>住宿安排</span></a><span class="dots"></span><span class="page">P.13</span></li>
+    <li><a href="#sec-food"><span class="num">09</span><span>美食推荐</span></a><span class="dots"></span><span class="page">P.14</span></li>
+    <li><a href="#sec-budget"><span class="num">10</span><span>详细预算</span></a><span class="dots"></span><span class="page">P.15</span></li>
+    <li><a href="#sec-practical"><span class="num">11</span><span>实用信息 & 打包清单</span></a><span class="dots"></span><span class="page">P.16</span></li>
+  </ul>
+
+  <div class="intro-banner" style="margin-top: 30px;">
+    <b>🌟 行程亮点</b><br>
+    ✅ 22 处世遗点一网打尽（开元寺、清净寺、洛阳桥等）<br>
+    ✅ 体验 <b>蟳埔簪花围</b>——赵丽颖同款"东方女神"造型<br>
+    ✅ 含 <b>5 张可视化路线轨迹图</b>，出门不迷路<br>
+    ✅ 4 晚 3 天节奏宽松，每日有 1-2 个核心景点<br>
+    ✅ 含 7/31 晚群星演唱会彩蛋（可选）
+  </div>
+</div>
+
+<!-- ============== 01 OVERVIEW ============== -->
+<section id="sec-overview" class="page-break">
+  <h2>01 🗺️ 行程总览 · 一图看懂全程</h2>
+
+  <div class="legend-row">
+    <span><i style="background:#B33A3A"></i><b>Day 1 红</b>· 古城初印象</span>
+    <span><i style="background:#3A7BB3"></i><b>Day 2 蓝</b>· 山水胜迹</span>
+    <span><i style="background:#3FB36A"></i><b>Day 3 绿</b>· 海丝遗韵</span>
+    <span><i style="background:#E8A33D"></i><b>Day 4 橙</b>· 天后宫·返程</span>
+  </div>
+
+  <figure>
+    <img src="images/route_overview.png" alt="泉州4日游总览图">
+    <figcaption>图1 · 泉州 4 日游完整路线总览（4 种颜色区分每天）</figcaption>
+  </figure>
+
+  <div class="stat-row">
+    <div class="stat-box"><div class="num">22</div><div class="label">世遗点</div></div>
+    <div class="stat-box"><div class="num">8+</div><div class="label">必吃小吃</div></div>
+    <div class="stat-box"><div class="num">~12k</div><div class="label">预算 (2人¥)</div></div>
+    <div class="stat-box"><div class="num">3.5h</div><div class="label">单程车程</div></div>
+  </div>
+
+  <div class="intro-banner">
+    <b>📌 行程设计原则</b>：<br>
+    ① 节奏由轻到重 — 第 1 天逛古城核心区暖身，第 2 天登清源山+洛阳桥吃体力，第 3 天出海丝文化+簪花体验，第 4 天古城收尾轻松返程<br>
+    ② 同片区景点串成一线 — 避免来回奔波；4 天总通勤约 30 公里<br>
+    ③ 午休时间 1.5-2h — 7 月底泉州午后暴晒+雷雨，最热时段在酒店/咖啡店休息<br>
+    ④ 全部使用高铁+出租车/小白车（古城招手即停）— 无需自驾
+  </div>
+</section>
+
+<!-- ============== 02 WEATHER ============== -->
+<section id="sec-weather" class="page-break">
+  <h2>02 ☀️ 天气与穿搭建议</h2>
+
+  <table>
+    <thead>
+      <tr>
+        <th>日期</th><th>星期</th><th>天气</th><th>气温</th><th>降水</th><th>风力</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr><td>7/31</td><td>周四</td><td>⛅ 多云转阵雨</td><td>27~34°C</td><td>40%</td><td>东南风 3-4 级</td></tr>
+      <tr><td>8/1</td><td>周五</td><td>🌦️ 雷阵雨转多云</td><td>27~33°C</td><td>60%</td><td>东南风 3-4 级</td></tr>
+      <tr><td>8/2</td><td>周六</td><td>🌤️ 多云</td><td>27~34°C</td><td>30%</td><td>东南风 2-3 级</td></tr>
+      <tr><td>8/3</td><td>周日</td><td>☀️ 多云</td><td>28~35°C</td><td>20%</td><td>偏南风 2-3 级</td></tr>
+    </tbody>
+  </table>
+
+  <h3>👕 穿搭建议</h3>
+  <div class="two-col">
+    <div class="info-box">
+      <h4>白天</h4>
+      <ul>
+        <li>短袖 T 恤 + 轻薄防晒衫/冰丝外套</li>
+        <li>短裤/七分裤 + 透气运动鞋（要走石板路）</li>
+        <li>女生：长裙 OK，但小心爬清源山时不便</li>
+      </ul>
+    </div>
+    <div class="info-box">
+      <h4>夜间</h4>
+      <ul>
+        <li>薄长袖防空调（餐厅/酒店空调足）</li>
+        <li>海边/桥上风力较大，外套必备</li>
+        <li>拖鞋/凉鞋用于逛吃</li>
+      </ul>
+    </div>
+  </div>
+
+  <h3>☔ 必备物品</h3>
+  <table>
+    <thead><tr><th>类别</th><th>物品</th><th>说明</th></tr></thead>
+    <tbody>
+      <tr><td>防晒</td><td>防晒霜 SPF50+、遮阳帽、墨镜</td><td>紫外线极强，每 2 小时补涂</td></tr>
+      <tr><td>防雨</td><td>折叠伞 / 一次性雨衣</td><td>午后雷阵雨说来就来</td></tr>
+      <tr><td>防暑</td><td>藿香正气水、电解质冲剂、小风扇</td><td>湿度 80%+ 极易中暑</td></tr>
+      <tr><td>防蚊</td><td>驱蚊液、蚊不叮</td><td>海边/山边蚊虫多</td></tr>
+    </tbody>
+  </table>
+
+  <div class="tip">
+    <b>⚠️ 天气提醒：</b>7 月底 8 月初是福建台风活跃期，出发前 3 天务必查最新天气预报。如遇台风预警，景点可能临时关闭（特别是洛阳桥、清源山），请优先安排<b>室内</b>活动（博物馆、关帝庙、西街老宅等）。
+  </div>
+</section>
+
+<!-- ============== 03 EVENTS ============== -->
+<section id="sec-events" class="page-break">
+  <h2>03 🎭 8 月活动 & 演出推荐</h2>
+
+  <div class="activity-card">
+    <h4>⭐ 7/31 19:00 泉星璀璨·海丝之夜群星演唱会</h4>
+    <p><b>地点：</b>泉州市海峡体育中心体育场 · <b>票价：</b>¥199-799 · <b>购票：</b>大麦 APP</p>
+    <p><b>阵容：</b>程响、邰正宵、卓依婷、郭静、王琪、六哲、井胧、井迪</p>
+    <p><b>已融入行程：</b>Day 1 晚 19:00-21:00（需打车 25 分钟从古城到海峡体育中心，结束后回酒店）</p>
+    <p><b>推荐理由：</b>正好在出发当晚！一场泉州版的"我们的歌"群星拼盘，¥199 起就有票，户外体育场。看完回酒店正好 22 点，不耽误次日行程。</p>
+  </div>
+
+  <div class="activity-card">
+    <h4>常态化演出：南音 + 提线木偶戏</h4>
+    <p><b>地点：</b>泉州歌舞剧院（西街附近）、府文庙、正音书院</p>
+    <p><b>时间：</b>每周五/六/日 19:30（具体场次以官方为准）</p>
+    <p><b>价格：</b>¥80-238 / 部分免费</p>
+    <p><b>推荐：</b>提线木偶戏是<b>世界双非遗</b>，<b>泉州歌舞剧院《遇见泉州》</b> 必看！</p>
+  </div>
+
+  <div class="activity-card">
+    <h4>免费体验：正音书院"非遗周末"</h4>
+    <p><b>地点：</b>正音书院（古城内，免费）</p>
+    <p><b>时间：</b>周末常态化演出南音、梨园戏、提线木偶、火鼎公婆</p>
+    <p><b>推荐：</b>逛西街时顺路过去看看，体验"半城烟火半城仙"</p>
+  </div>
+
+  <h3>📅 节日彩蛋（你不在的日子）</h3>
+  <ul>
+    <li><b>8/8 19:00</b>：陆虎"像你这样的朋友 3.0" 巡演 — 晋江二体 ¥399-2398</li>
+    <li><b>10/31-11/1</b>：A-Lin 歌迹巡演 — 晋江二体（如果想二刷泉州的好理由）</li>
+  </ul>
+
+  <div class="tip">
+    <b>🎫 预订提醒：</b>群星演唱会等热门演出提前 3-7 天在大麦 APP 购票；提线木偶戏可现场购票或通过"泉州歌舞剧院"公众号预订。
+  </div>
+</section>
+
+<!-- ============== 04 DAY 1 ============== -->
+<section id="sec-day1" class="page-break">
+  <h2>04 · Day 1 · 古城初印象</h2>
+
+  <div class="day-card">
+    <div class="day-header">
+      <div>
+        <span class="day-label">Day 1</span>
+        <span class="day-theme">— 抵达 + 西街核心区</span>
+      </div>
+      <span class="day-date">7/31 周四</span>
+    </div>
+
+    <div>
+      <span class="weather-pill">⛅ 27~34°C</span>
+      <span class="weather-pill">🌧️ 40% 阵雨</span>
+      <span class="weather-pill">👟 步行 8 公里</span>
+    </div>
+
+    <figure style="margin-top:12px;">
+      <img src="images/day1_route.png" alt="Day 1 路线图">
+      <figcaption>图 2 · Day 1 路线：泉州南站 → 酒店 → 开元寺 → 西街 → 钟楼</figcaption>
+    </figure>
+
+    <a class="map-link" href="https://www.google.com/maps/dir/泉州南站/西街/开元寺/钟楼" target="_blank">📍 在 Google 地图中打开 Day 1 完整路线</a>
+
+    <ul class="timeline">
+      <li>
+        <div class="time">09:36</div>
+        <div class="bullet transport"></div>
+        <div class="content"><b>🚄 东莞南 → 泉州南</b><br>高铁 G924（09:36-13:00），3h24min，二等座 ¥309/人<br>含一节商务座可选（¥1083/人，更宽敞）</div>
+      </li>
+      <li>
+        <div class="time">13:00</div>
+        <div class="bullet transport"></div>
+        <div class="content"><b>🚖 抵达泉州南站</b><br>出站打车 25 分钟到西街酒店（约 ¥50），或公交 K1 路（¥2，45 分钟）<br>建议打车，下午暴晒+行李不便</div>
+      </li>
+      <li>
+        <div class="time">14:00</div>
+        <div class="bullet hotel"></div>
+        <div class="content"><b>🏨 入住西街/开元寺片区酒店</b><br>推荐：<span class="highlight">巷遇酒店、2208 民宿、亚朵西街店</span><br>放行李、洗把脸、稍作休整</div>
+      </li>
+      <li>
+        <div class="time">15:00</div>
+        <div class="bullet"></div>
+        <div class="content"><b>🛕 开元寺（免费，建议 1.5h）</b><br>始建于唐垂拱二年（686 年），1300+ 年历史，福建最大佛教寺院<br><b>必看：</b>东西双塔（中国最高孪生石塔）、大雄宝殿飞天乐伎、千年古桑"桑莲"、甘露戒坛<br>地址：鲤城区西街 176 号</div>
+      </li>
+      <li>
+        <div class="time">16:30</div>
+        <div class="bullet food"></div>
+        <div class="content"><b>🍡 西街美食暴走</b><br>边走边吃：亚佛润饼皮 → 老记面线糊（加醋肉+卤大肠）→ 海丝金凤元宵圆 → 桥仔头醋肉 → 康庄满煎糕 → 五叔公土笋冻<br>人均 ¥60 就能吃撑！</div>
+      </li>
+      <li>
+        <div class="time">18:30</div>
+        <div class="bullet"></div>
+        <div class="content"><b>🕰️ 钟楼（5 分钟打卡）</b><br>1934 年建的罗马式钟楼，泉州地标。中西合璧风格，傍晚光线最美</div>
+      </li>
+      <li>
+        <div class="time">19:00</div>
+        <div class="bullet food"></div>
+        <div class="content"><b>🍽️ 晚餐 · 二选一</b><br>方案A：<b>东兴牛肉店（庄府巷）</b>— 牛排 + 牛肉羹 + 咸饭黄金套餐，人均 ¥50<br>方案B：<b>忠记盐烧番鸭</b>— 闽南姜母鸭代表，砂锅现焖，人均 ¥80</div>
+      </li>
+      <li>
+        <div class="time">21:00</div>
+        <div class="bullet hotel"></div>
+        <div class="content"><b>🏨 回酒店休整</b><br>若买 7/31 群星演唱会票，则 19:00 出发海峡体育中心（打车 ¥40），22:00 散场后回酒店</div>
+      </li>
+    </ul>
+
+    <div class="budget-day">
+      <span>当日预算（2人）</span>
+      <span><b>¥1,180</b>（含高铁分摊 618 + 餐 200 + 交通 100 + 门票 0 + 应急 262）</span>
+    </div>
+  </div>
+</section>
+
+<!-- ============== 05 DAY 2 ============== -->
+<section id="sec-day2" class="page-break">
+  <h2>05 · Day 2 · 山水胜迹</h2>
+
+  <div class="day-card">
+    <div class="day-header">
+      <div>
+        <span class="day-label">Day 2</span>
+        <span class="day-theme">— 清源山 + 洛阳桥</span>
+      </div>
+      <span class="day-date">8/1 周五</span>
+    </div>
+
+    <div>
+      <span class="weather-pill">🌦️ 27~33°C</span>
+      <span class="weather-pill">🌧️ 60% 雷阵雨</span>
+      <span class="weather-pill">🚖 25 公里</span>
+    </div>
+
+    <figure style="margin-top:12px;">
+      <img src="images/day2_route.png" alt="Day 2 路线图">
+      <figcaption>图 3 · Day 2 路线：酒店 → 清源山 → 洛阳桥 → 西街</figcaption>
+    </figure>
+
+    <a class="map-link" href="https://www.google.com/maps/dir/西街/清源山/洛阳桥/西街" target="_blank">📍 在 Google 地图中打开 Day 2 完整路线</a>
+
+    <ul class="timeline">
+      <li>
+        <div class="time">08:00</div>
+        <div class="bullet food"></div>
+        <div class="content"><b>🍜 早餐：面线糊（西街附近）</b><br>推荐：<b>水门国仔面线糊</b>（30 年老店，醋肉酥脆堪称一绝）<br>加醋肉 + 卤大肠 + 油条，人均 ¥20，灵魂早餐</div>
+      </li>
+      <li>
+        <div class="time">09:00</div>
+        <div class="bullet"></div>
+        <div class="content"><b>⛰️ 清源山（5A 景区，3h）</b><br>地址：丰泽区泉山路 · 门票 ¥70/人<br>建议路线：老君岩（必看）→ 千手岩 → 弥陀岩 → 南台岩俯瞰泉州城<br><b>必看：</b>老君岩 — 中国现存最大老子石雕（宋代），高 5.63 米，由一整块花岗岩雕成</div>
+      </li>
+      <li>
+        <div class="time">12:30</div>
+        <div class="bullet food"></div>
+        <div class="content"><b>🍱 山下简餐</b><br>推荐：<b>清源山脚下农家菜</b>，或回古城吃东兴牛肉店（午市套餐更划算）<br>人均 ¥40</div>
+      </li>
+      <li>
+        <div class="time">14:30</div>
+        <div class="bullet"></div>
+        <div class="content"><b>🌉 洛阳桥（2h，世界遗产）</b><br>地址：洛江区桥南街 · 门票免费<br>始建于北宋皇祐五年（1053），中国现存最古老跨海石桥，"海内第一桥"<br><b>必看：</b>"种蠔固基"生物工程奇迹（牡蛎胶合桥墩）、蔡襄石刻、桥上石塔石狮<br>退潮时桥下牡蛎礁最美！</div>
+      </li>
+      <li>
+        <div class="time">17:00</div>
+        <div class="bullet transport"></div>
+        <div class="content"><b>🚖 返回古城</b><br>洛阳桥打车回西街约 30 分钟 / ¥60</div>
+      </li>
+      <li>
+        <div class="time">18:30</div>
+        <div class="bullet food"></div>
+        <div class="content"><b>🍽️ 晚餐 · 觅鲤文创园</b><br>推荐：<b>荔枝苑酒家</b>（闽南菜，蟹黄豆腐、姜母鸭）或<b>秉正堂四果汤</b>+ 炸串<br>人均 ¥120</div>
+      </li>
+      <li>
+        <div class="time">20:00</div>
+        <div class="bullet"></div>
+        <div class="content"><b>🌃 西街夜景 + 小白车漫游</b><br>夜间的西街是另一个世界：红灯笼、骑楼、远处双塔剪影、巷口南音悠扬<br>推荐：<b>莓超疯二楼天台</b>看西街全景和开元寺双塔日落/夜景</div>
+      </li>
+    </ul>
+
+    <div class="budget-day">
+      <span>当日预算（2人）</span>
+      <span><b>¥720</b>（含门票 140 + 餐 280 + 交通 200 + 应急 100）</span>
+    </div>
+
+    <div class="tip">
+      <b>💡 Day 2 提醒：</b>清源山有观光车（往返 ¥20/人），如果怕累可以坐，但老君岩必须步行；建议穿运动鞋，景区内石阶较多。洛阳桥上拍照下午逆光，建议<b>上午 10 点</b>或<b>傍晚 5 点</b>去。
+    </div>
+  </div>
+</section>
+
+<!-- ============== 06 DAY 3 ============== -->
+<section id="sec-day3" class="page-break">
+  <h2>06 · Day 3 · 海丝遗韵</h2>
+
+  <div class="day-card">
+    <div class="day-header">
+      <div>
+        <span class="day-label">Day 3</span>
+        <span class="day-theme">— 蟳埔簪花 + 古城宗教建筑</span>
+      </div>
+      <span class="day-date">8/2 周六</span>
+    </div>
+
+    <div>
+      <span class="weather-pill">🌤️ 27~34°C</span>
+      <span class="weather-pill">🌧️ 30% 阵雨</span>
+      <span class="weather-pill">📸 出片日</span>
+    </div>
+
+    <figure style="margin-top:12px;">
+      <img src="images/day3_route.png" alt="Day 3 路线图">
+      <figcaption>图 4 · Day 3 路线：酒店 → 蟳埔村 → 海外交通史博物馆 → 涂门街 → 西街</figcaption>
+    </figure>
+
+    <a class="map-link" href="https://www.google.com/maps/dir/西街/蟳埔村/海外交通史博物馆/关帝庙/清净寺/西街" target="_blank">📍 在 Google 地图中打开 Day 3 完整路线</a>
+
+    <ul class="timeline">
+      <li>
+        <div class="time">08:30</div>
+        <div class="bullet food"></div>
+        <div class="content"><b>🍜 早餐：侯阿婆烧肉粽</b><br>东街，钟楼附近。招牌鲍鱼肉粽每日限量，蛋黄肉粽 ¥15/个<br>配牛肉羹汤更地道</div>
+      </li>
+      <li>
+        <div class="time">09:30</div>
+        <div class="bullet"></div>
+        <div class="content"><b>🌸 蟳埔村 · 簪花围体验（3h）</b><br>地址：丰泽区东海街道 · 簪花+服装 ¥40-100/人<br>《蟳埔女》非遗体验：换装 → 簪花 → 蚵壳厝拍照 → 海边落日<br>推荐找<b>独立摄影师跟拍</b>（¥300-500/小时，出片更精）<br>2 人共约 ¥500 含簪花 + 服装 + 简拍</div>
+      </li>
+      <li>
+        <div class="time">12:30</div>
+        <div class="bullet food"></div>
+        <div class="content"><b>🦪 蟳埔村海鲜午餐</b><br>现捞现做：海蛎煎、炸醋肉、鱼仔粥、土笋冻<br>推荐：<b>蟳埔渔家大排档</b>，人均 ¥80<br>避雷：景区门口"海鲜宰客店"</div>
+      </li>
+      <li>
+        <div class="time">14:00</div>
+        <div class="bullet"></div>
+        <div class="content"><b>🛳️ 泉州海外交通史博物馆（1.5h，免费）</b><br>地址：丰泽区东湖街 425 号 · 周一闭馆<br>中国唯一海外交通史专题博物馆，<b>镇馆之宝：宋代沉船</b><br>看泉州作为"东方第一大港"的辉煌</div>
+      </li>
+      <li>
+        <div class="time">15:30</div>
+        <div class="bullet"></div>
+        <div class="content"><b>🏛️ 涂门街宗教建筑群（步行 1.5h）</b><br>一天逛 3 座宗教圣地，泉州"世界宗教博物馆"的精华：<br>· <b>关帝庙</b>（香火最旺闽南庙，雕花艺术博物馆）<br>· <b>清净寺</b>（¥3，1000 年阿拉伯风格伊斯兰古寺）<br>· <b>府文庙</b>（东南最大孔庙，"万世师表"康熙匾额）</div>
+      </li>
+      <li>
+        <div class="time">17:30</div>
+        <div class="bullet food"></div>
+        <div class="content"><b>☕ 下午茶歇 + 咖啡馆小坐</b><br>涂门街附近咖啡店很多，避开最热时段<br>推荐：<b>西街莓超疯</b>或<b>开元寺旁茶馆</b></div>
+      </li>
+      <li>
+        <div class="time">19:00</div>
+        <div class="bullet food"></div>
+        <div class="content"><b>🍽️ 晚餐 · 西街深度觅食</b><br>今晚放开吃：海蛎煎、烧肉粽、姜母鸭、四果汤、土笋冻、醋肉、满煎糕、牛肉羹、面线糊、润饼……<br>预算 ¥200/2 人吃到扶墙出</div>
+      </li>
+      <li>
+        <div class="time">21:00</div>
+        <div class="bullet"></div>
+        <div class="content"><b>🎭 提线木偶戏（可选，¥80-238）</b><br>泉州歌舞剧院，每周末晚 19:30<br>世界双非遗，<b>《小沙弥下山》《人偶情未了》</b> 必看</div>
+      </li>
+    </ul>
+
+    <div class="budget-day">
+      <span>当日预算（2人）</span>
+      <span><b>¥1,280</b>（含簪花 500 + 餐 360 + 交通 100 + 演出 200 + 应急 120）</span>
+    </div>
+
+    <div class="tip">
+      <b>📸 出片小技巧：</b>蟳埔簪花是这趟旅行的"高光时刻"！建议<b>提前在小红书预约</b>口碑好的化妆师/摄影师，避开"流水线作业"的廉价店。蚵壳厝巷子、正门口妈祖庙、顺济宫都是经典取景地。
+    </div>
+  </div>
+</section>
+
+<!-- ============== 07 DAY 4 ============== -->
+<section id="sec-day4" class="page-break">
+  <h2>07 · Day 4 · 天后宫·返程</h2>
+
+  <div class="day-card">
+    <div class="day-header">
+      <div>
+        <span class="day-label">Day 4</span>
+        <span class="day-theme">— 古城收尾 + 返程</span>
+      </div>
+      <span class="day-date">8/3 周日</span>
+    </div>
+
+    <div>
+      <span class="weather-pill">☀️ 28~35°C</span>
+      <span class="weather-pill">🌧️ 20% 降水</span>
+      <span class="weather-pill">🚖 8 公里</span>
+    </div>
+
+    <figure style="margin-top:12px;">
+      <img src="images/day4_route.png" alt="Day 4 路线图">
+      <figcaption>图 5 · Day 4 路线：酒店 → 天后宫 → 西街 → 中山路 → 泉州南站</figcaption>
+    </figure>
+
+    <a class="map-link" href="https://www.google.com/maps/dir/西街/天后宫/中山路/泉州南站" target="_blank">📍 在 Google 地图中打开 Day 4 完整路线</a>
+
+    <ul class="timeline">
+      <li>
+        <div class="time">08:00</div>
+        <div class="bullet"></div>
+        <div class="content"><b>🏨 退房寄存行李</b><br>前台寄存行李（如有需要），轻装出门</div>
+      </li>
+      <li>
+        <div class="time">08:30</div>
+        <div class="bullet"></div>
+        <div class="content"><b>⛩️ 天后宫（妈祖庙，1h，免费）</b><br>地址：鲤城区天后路 1 号<br>始建于 1196 年，中国现存规模最大、规格最高、传播最广的妈祖庙<br>郑和下西洋前必在此祭拜！<br>看古戏台、拜庭、天后殿，找海洋文化元素（船锚、海浪纹）</div>
+      </li>
+      <li>
+        <div class="time">09:30</div>
+        <div class="bullet food"></div>
+        <div class="content"><b>🍜 西街早餐（最后一次！）</b><br>面线糊 + 海蛎煎 + 现炸醋肉，<b>不能错过的最后机会</b><br>也可以买手信：源和堂蜜饯、好成财牛排真空包、秉正堂石花膏</div>
+      </li>
+      <li>
+        <div class="time">11:00</div>
+        <div class="bullet"></div>
+        <div class="content"><b>🏛️ 中山路漫步（1h）</b><br>中国保存最完整的连排式骑楼建筑商业街，南洋风格<br>南门 → 钟楼一路步行，可买伴手礼（铁观音、德化瓷器、闽南红砖工艺品）</div>
+      </li>
+      <li>
+        <div class="time">12:00</div>
+        <div class="bullet food"></div>
+        <div class="content"><b>🍽️ 最后的午餐</b><br>推荐：<b>蓝氏钟楼肉粽</b>（60 年老字号）或<b>好成财牛排馆</b>（药膳牛排）<br>人均 ¥60</div>
+      </li>
+      <li>
+        <div class="time">13:00</div>
+        <div class="bullet transport"></div>
+        <div class="content"><b>🚖 取行李 + 前往泉州南站</b><br>酒店取行李 → 打车 25 分钟 / ¥50 到泉州南站<br>预留 1 小时安检候车</div>
+      </li>
+      <li>
+        <div class="time">14:00</div>
+        <div class="bullet transport"></div>
+        <div class="content"><b>🚄 泉州南 → 东莞南</b><br>推荐车次：G3023（15:36-19:46，4h10min，¥285/二等座）<br>或 D3311（14:46-18:31，3h45min，¥273/二等座）<br><b>17:00 前后</b>抵达东莞南</div>
+      </li>
+    </ul>
+
+    <div class="budget-day">
+      <span>当日预算（2人）</span>
+      <span><b>¥820</b>（含高铁分摊 570 + 餐 160 + 交通 70 + 手信 0 + 应急 20）</span>
+    </div>
+
+    <div class="tip">
+      <b>🛍️ 伴手礼推荐：</b>源和堂蜜饯（百年老字号）、好成财真空牛排、秉正堂石花膏、德化白瓷、铁观音（安溪）、永春老醋、闽南红砖茶宠。
+    </div>
+  </div>
+</section>
+
+<!-- ============== 08 STAY ============== -->
+<section id="sec-stay" class="page-break">
+  <h2>08 🏨 住宿安排（3 晚）</h2>
+
+  <p>推荐住在 <b>西街 / 开元寺片区</b>，理由：① 步行 10-15 分钟到大部分核心景点 ② 周边美食密集 ③ 夜游西街方便 ④ 有"小白车"招手即停。</p>
+
+  <h3>🌟 推荐酒店（按性价比排序）</h3>
+
+  <table>
+    <thead>
+      <tr><th>酒店</th><th>位置</th><th>价格/晚</th><th>特色</th><th>适合</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><b>巷遇酒店</b>（西街开元寺店）<br>⭐ 4.8 · 2098 点评</td>
+        <td>鲤城区通政巷 1 号</td>
+        <td>¥500-700</td>
+        <td>天台可赏双塔、内设木偶剧场、闽南老建筑改造</td>
+        <td>情侣/家庭</td>
+      </tr>
+      <tr>
+        <td><b>2208 民宿</b>（西街开元寺店）<br>⭐ 4.7 · 375 点评</td>
+        <td>西街开元寺旁</td>
+        <td>¥400-600</td>
+        <td>塔景房、老板娘热情、露台花园</td>
+        <td>年轻情侣</td>
+      </tr>
+      <tr>
+        <td><b>亚朵酒店</b>（西街开元盛世店）<br>⭐ 4.9 · 163 点评</td>
+        <td>西街开元盛世广场</td>
+        <td>¥500-800</td>
+        <td>亚朵品质、毗邻开元寺、新开业、健身房</td>
+        <td>商务/情侣</td>
+      </tr>
+      <tr>
+        <td><b>录莳民宿</b>（西街开元寺店）<br>⭐ 4.9 · 1409 点评</td>
+        <td>西街 50m</td>
+        <td>¥600-900</td>
+        <td>新中式庭院、隐逸可停车、户外电影院</td>
+        <td>家庭/小团</td>
+      </tr>
+      <tr>
+        <td><b>汉庭酒店</b>（西湖公园西街店）<br>⭐ 4.5 · 774 点评</td>
+        <td>西湖公园附近</td>
+        <td>¥200-300</td>
+        <td>性价比高、门口招手小公交</td>
+        <td>学生/穷游</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="info-box">
+    <h4>💰 舒适型预算：3 晚 × ¥600 = ¥1,800（2 人共）</h4>
+    <p>建议在 <b>携程/美团/飞猪</b> 提前 1-2 周预订。7 月底 8 月初属于暑假旺季，价格上浮 20-30%。</p>
+  </div>
+</section>
+
+<!-- ============== 09 FOOD ============== -->
+<section id="sec-food" class="page-break">
+  <h2>09 🍜 美食推荐（必吃清单）</h2>
+
+  <p>泉州小吃 200+ 种，<b>建议每种尝一口，别贪多</b>。预算：人均 ¥150/天 就能吃得很爽。</p>
+
+  <h3>🏆 十大必吃</h3>
+  <table>
+    <thead>
+      <tr><th>排名</th><th>美食</th><th>推荐店</th><th>人均</th><th>必点理由</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>1</td><td><b>面线糊</b></td><td>水门国仔 / 后城 / 老记</td><td>¥15-25</td><td>泉州人的灵魂早餐，必加醋肉+卤大肠</td></tr>
+      <tr><td>2</td><td><b>牛肉羹</b></td><td>东兴牛肉店 / 好成财</td><td>¥25-40</td><td>牛排+牛肉羹+咸饭黄金套餐</td></tr>
+      <tr><td>3</td><td><b>姜母鸭</b></td><td>忠记盐烧 / 张林</td><td>¥80-120</td><td>砂锅现焖，滋补暖身</td></tr>
+      <tr><td>4</td><td><b>海蛎煎</b></td><td>群众牛肉小点 / 蟳埔村现做</td><td>¥25-40</td><td>边缘焦脆、内里鲜嫩</td></tr>
+      <tr><td>5</td><td><b>烧肉粽</b></td><td>侯阿婆 / 蓝氏钟楼</td><td>¥15-25</td><td>鲍鱼粽/蛋黄粽，咸甜交织</td></tr>
+      <tr><td>6</td><td><b>土笋冻</b></td><td>五叔公 / 长虎</td><td>¥15-25</td><td>"暗黑系"Q弹，闭眼一口闷</td></tr>
+      <tr><td>7</td><td><b>四果汤</b></td><td>秉正堂 / 爱啊石花膏</td><td>¥10-15</td><td>夏日消暑神器，石花膏+水果</td></tr>
+      <tr><td>8</td><td><b>醋肉</b></td><td>桥仔头 / 中山路</td><td>¥15-25</td><td>酸甜开胃，配面线糊一绝</td></tr>
+      <tr><td>9</td><td><b>润饼菜</b></td><td>亚佛润饼皮</td><td>¥10-15</td><td>薄如蝉翼，央视《舌尖》拍摄地</td></tr>
+      <tr><td>10</td><td><b>满煎糕</b></td><td>康庄满煎糕</td><td>¥5-10</td><td>红糖花生馅，松软香甜</td></tr>
+    </tbody>
+  </table>
+
+  <h3>🥢 餐厅推荐</h3>
+  <div class="two-col">
+    <div class="info-box">
+      <h4>🍽️ 正式餐厅</h4>
+      <ul>
+        <li><b>荔枝苑酒家</b>（闽南菜）— 人均 ¥120</li>
+        <li><b>好成财牛排馆</b>（药膳牛排）— 人均 ¥80</li>
+        <li><b>张林姜母鸭</b>（晋江总店）— 人均 ¥90</li>
+        <li><b>秉正堂石花膏</b>（天后宫总店）— 人均 ¥15</li>
+      </ul>
+    </div>
+    <div class="info-box">
+      <h4>🥡 大排档/夜宵</h4>
+      <ul>
+        <li><b>蟳埔渔家大排档</b>— 海鲜人均 ¥80</li>
+        <li><b>曾阿姨炸串</b>（西街）— 人均 ¥20</li>
+        <li><b>后城面线糊</b>（深夜营业）— 人均 ¥20</li>
+        <li><b>新门街浮粿摊</b>— 人均 ¥10</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="tip">
+    <b>💰 餐饮预算：</b>4 天 3 晚，2 人共约 <b>¥1,000-1,200</b>（含早午晚+小食+饮料）<br>
+    <b>⚠️ 避雷：</b>景区门口"野生导游"推荐的高价海鲜店；西街主街两侧同等品质小店比主街便宜 30%。
+  </div>
+</section>
+
+<!-- ============== 10 BUDGET ============== -->
+<section id="sec-budget" class="page-break">
+  <h2>10 💰 详细预算</h2>
+
+  <h3>📊 总预算（2 人 / 4 天 3 晚）</h3>
+  <table>
+    <thead>
+      <tr><th>类别</th><th>明细</th><th>金额（¥）</th><th>占比</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>🚄 往返高铁</td><td>东莞南↔泉州南，二等座 × 2 人</td><td>1,188</td><td>18%</td></tr>
+      <tr><td>🏨 住宿</td><td>西街舒适型酒店，3 晚</td><td>1,800</td><td>27%</td></tr>
+      <tr><td>🍜 餐饮</td><td>早午晚+小食+饮料，4 天</td><td>1,100</td><td>17%</td></tr>
+      <tr><td>🎫 门票/活动</td><td>清源山 140 + 簪花 500 + 演出 200 + 杂项 100</td><td>940</td><td>14%</td></tr>
+      <tr><td>🚖 当地交通</td><td>打车 + 小白车 + 公交，4 天</td><td>500</td><td>8%</td></tr>
+      <tr><td>🛍️ 购物/手信</td><td>伴手礼 + 应急</td><td>500</td><td>8%</td></tr>
+      <tr><td>🆘 应急备用</td><td>建议 10%</td><td>600</td><td>9%</td></tr>
+      <tr style="background:#FFE5B4;"><td colspan="2"><b>总计（2 人）</b></td><td><b>¥6,628</b></td><td><b>100%</b></td></tr>
+      <tr style="background:#FFF3DC;"><td colspan="2"><b>人均</b></td><td><b>¥3,314</b></td><td>—</td></tr>
+    </tbody>
+  </table>
+
+  <h3>📅 每日明细</h3>
+  <table>
+    <thead>
+      <tr><th>日期</th><th>交通</th><th>餐饮</th><th>门票</th><th>其他</th><th>小计</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>7/31 Day 1</td><td>高铁 618</td><td>200</td><td>0</td><td>打车 100</td><td><b>1,180</b></td></tr>
+      <tr><td>8/1 Day 2</td><td>200</td><td>280</td><td>140</td><td>—</td><td><b>720</b></td></tr>
+      <tr><td>8/2 Day 3</td><td>100</td><td>360</td><td>700</td><td>演出 200</td><td><b>1,280</b></td></tr>
+      <tr><td>8/3 Day 4</td><td>高铁 570 + 打车 70</td><td>160</td><td>0</td><td>手信 200</td><td><b>1,000</b></td></tr>
+      <tr style="background:#FFF3DC;"><td colspan="5"><b>4 天合计</b></td><td><b>¥4,180 + 住宿 1,800 + 应急 600 = 6,580</b></td></tr>
+    </tbody>
+  </table>
+
+  <h3>💡 省钱小贴士</h3>
+  <div class="two-col">
+    <div class="info-box">
+      <h4>🎫 门票</h4>
+      <ul>
+        <li>开元寺、天后宫、府文庙、洛阳桥均免费</li>
+        <li>清源山 ¥70，可买泉州文旅卡年卡更划算（¥100/年）</li>
+        <li>清净寺只要 ¥3</li>
+      </ul>
+    </div>
+    <div class="info-box">
+      <h4>🚖 交通</h4>
+      <ul>
+        <li>古城内"小白车"¥2-5 招手即停</li>
+        <li>公交 K1 路 泉州南站↔西街，¥2</li>
+        <li>滴滴打车白天便宜，夜里加价</li>
+      </ul>
+    </div>
+    <div class="info-box">
+      <h4>🍜 餐饮</h4>
+      <ul>
+        <li>早餐面线糊+油条 ¥10/人搞定</li>
+        <li>西街主街两侧小店比主街便宜 30%</li>
+        <li>午餐套餐比单点便宜 1/3</li>
+      </ul>
+    </div>
+    <div class="info-box">
+      <h4>🏨 住宿</h4>
+      <ul>
+        <li>避开周末（周五周六贵 50%）</li>
+        <li>7 月底属于旺季，提前 2 周订</li>
+        <li>民宿常有连住折扣</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- ============== 11 PRACTICAL ============== -->
+<section id="sec-practical" class="page-break">
+  <h2>11 📋 实用信息 & 打包清单</h2>
+
+  <h3>🌍 基础信息</h3>
+  <table>
+    <tbody>
+      <tr><td><b>语言</b></td><td>普通话 + 闽南语（部分老人说闽南话）</td></tr>
+      <tr><td><b>货币</b></td><td>人民币（CNY），移动支付普及（支付宝/微信）</td></tr>
+      <tr><td><b>时差</b></td><td>无（北京时间 UTC+8）</td></tr>
+      <tr><td><b>电压</b></td><td>220V / 50Hz，插座为两脚扁型+三脚扁型</td></tr>
+      <tr><td><b>网络</b></td><td>5G 全覆盖，无需特别换卡</td></tr>
+    </tbody>
+  </table>
+
+  <h3>🚨 紧急联系</h3>
+  <table>
+    <tbody>
+      <tr><td>报警</td><td>110</td><td>急救</td><td>120</td></tr>
+      <tr><td>火警</td><td>119</td><td>交通事故</td><td>122</td></tr>
+      <tr><td>泉州旅游咨询</td><td>12345</td><td>泉州台商服务</td><td>0595-22500194</td></tr>
+    </tbody>
+  </table>
+
+  <h3>📱 实用 APP</h3>
+  <ul>
+    <li><b>地图：</b>高德地图 / 百度地图（泉州数据比 Google 准）</li>
+    <li><b>订票：</b>12306（火车票）、大麦（演出）、美团/携程（酒店/门票）</li>
+    <li><b>美食：</b>大众点评 / 小红书（探店推荐）</li>
+    <li><b>翻译：</b>闽南语翻译器（"你好" = "汝好 / 恁好"）</li>
+  </ul>
+
+  <h3>⚠️ 当地习俗 / 注意事项</h3>
+  <div class="tip">
+    <b>🛕 进寺庙：</b>清净寺女性需穿及膝长裤/长裙，男性禁止袒胸露背；关帝庙先门外拜天公，再依次敬拜关公、岳飞
+  </div>
+  <div class="tip">
+    <b>🦐 海鲜：</b>蟳埔村吃海鲜先问价，避免"按斤变按两"陷阱
+  </div>
+  <div class="tip">
+    <b>🌡️ 防暑：</b>藿香正气水随身带；不要正午 12-14 点暴晒；及时补水
+  </div>
+  <div class="tip">
+    <b>🌀 台风：</b>7-8 月是台风季，出发前 3 天查天气；如遇橙色预警，景点可能临时关闭
+  </div>
+
+  <h3>🎒 打包清单</h3>
+  <table>
+    <thead>
+      <tr><th>类别</th><th>物品</th><th>必带</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>📄 证件</td><td>身份证、机票/车票电子凭证、酒店订单、医保卡</td><td>✓</td></tr>
+      <tr><td>📱 电子</td><td>手机+充电器、充电宝（≤20000mAh）、相机</td><td>✓</td></tr>
+      <tr><td>🔌 转换</td><td>无需（国标插座）</td><td>—</td></tr>
+      <tr><td>👕 衣物</td><td>短袖×3、薄外套×1、短裤/裙×2、运动鞋、拖鞋、内衣袜</td><td>✓</td></tr>
+      <tr><td>☔ 天气</td><td>折叠伞、防晒霜 SPF50+、遮阳帽、墨镜、藿香正气水</td><td>✓</td></tr>
+      <tr><td>💊 药品</td><td>感冒药、肠胃药、创可贴、驱蚊液、个人常备药</td><td>✓</td></tr>
+      <tr><td>🧴 洗护</td><td>牙刷、毛巾、洗面奶、护肤品、防晒霜（再次提醒）</td><td>✓</td></tr>
+      <tr><td>💰 支付</td><td>现金 ¥500（应急）、信用卡、移动支付必开</td><td>✓</td></tr>
+      <tr><td>📷 拍照</td><td>蟳埔村拍照可带：浅色/纯色长裙、草帽、扇子、丝巾</td><td>推荐</td></tr>
+    </tbody>
+  </table>
+
+  <div class="doc-footer">
+    <p>祝您和伙伴在泉州度过一段美好的"半城烟火半城仙"时光 ✨</p>
+    <p>本方案由 Mavis · 全球旅游规划师 | 30 年环球旅行经验 | 顶级规划师 精心定制</p>
+    <p>📅 制作日期：2026 年 7 月 · 数据来源：携程、12306、去哪儿、泉州本地宝、官方文旅局</p>
+  </div>
+</section>
+
+</body>
+</html>
