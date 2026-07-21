@@ -66,7 +66,7 @@ except ImportError:
 # DB is at E:/api/fund_estimator/lof_database/lof_master.db
 # So we need to go up TWO levels from _THIS_DIR
 # ---------------------------------------------------------------------------
-_DB_PATH = str(_PROJECT_ROOT / "lof_database" / "lof_master.db")
+_DB_PATH = str(_PROJECT_ROOT / "lof_database" / "lof_info.db")
 
 
 # ===================================================================

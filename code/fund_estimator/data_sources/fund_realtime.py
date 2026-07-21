@@ -12,7 +12,9 @@ LOF 场内实时交易价格获取模块
 
 from __future__ import annotations
 
+import os
 import re
+import sys
 import time
 from dataclasses import dataclass, asdict
 from typing import Optional, Dict
@@ -139,8 +141,43 @@ def _parse_tencent(code: str, body: str) -> Optional[IntradayQuote]:
 
 
 # ====================================================================
-# 天天基金估算净值解析
+# Lazy imports for fund_estimator_index_agent (fallback when fundgz is down)
 # ====================================================================
+
+_estimate_realtime_fn = None
+
+
+def _ensure_imports():
+    """延迟导入 fund_estimator_index_agent，避免循环导入。"""
+    global _estimate_realtime_fn
+    if _estimate_realtime_fn is not None:
+        return
+    try:
+        # __file__ is: .../fund_estimator/data_sources/fund_realtime.py
+        _realpath = os.path.realpath(__file__)
+        _data_sources_dir = os.path.dirname(_realpath)
+        _fund_estimator_dir = os.path.dirname(_data_sources_dir)
+        _code_root = os.path.dirname(_fund_estimator_dir)
+        _code_root_abs = os.path.abspath(_code_root)
+        if _code_root_abs not in sys.path:
+            sys.path.insert(0, _code_root_abs)
+        from fund_estimator.fund_estimator_index_agent import estimate_realtime
+        _estimate_realtime_fn = estimate_realtime
+    except Exception:
+        # 静默失败，不影响主流程
+        _estimate_realtime_fn = None
+
+
+def _call_estimate_realtime(fund_code: str, date: str):
+    """调用估值引擎，失败返回 None。"""
+    if _estimate_realtime_fn is None:
+        _ensure_imports()
+    if _estimate_realtime_fn is None:
+        return None
+    try:
+        return _estimate_realtime_fn(fund_code, date)
+    except Exception:
+        return None
 
 _TIAN_TIAN_RE = re.compile(
     r'jsonpgz\(\s*\{([^}]+)\}\s*\)', re.DOTALL
@@ -235,17 +272,48 @@ def fetch_intraday_quotes_batch(codes: list[str]) -> Dict[str, IntradayQuote]:
 
 
 def fetch_estimate(fund_code: str) -> Optional[FundEstimate]:
-    """获取天天基金的估算净值。"""
-    tencent_code = _build_tencent_code(fund_code)
-    if not tencent_code:
-        return None
-    
+    """获取基金的估算净值。
+
+    数据源优先级:
+    1. 天天基金 fundgz 接口（2026年1月30日起已下线）
+    2. fund_estimator_index_agent 估值引擎（fallback）
+    """
+    import datetime
+
+    # --- Primary: 天天基金 fundgz (已下线，保留备用) ---
     url = f"http://fundgz.1234567.com.cn/js/{fund_code}.js"
     try:
         text = http_get(url, encoding="utf-8")
-        return _parse_tiantian(tencent_code, text)
+        result = _parse_tiantian(fund_code, text)
+        if result and result.estimated_nav > 0:
+            return result
     except Exception:
         pass
+
+    # --- Fallback: 使用 fund_estimator_index_agent 估值 ---
+    try:
+        est_result = _call_estimate_realtime(fund_code, datetime.datetime.now().strftime("%Y-%m-%d"))
+        if est_result and est_result.get("success"):
+            est_nav = est_result.get("estimated_nav", 0)
+            est_change = est_result.get("estimated_change_pct", 0)
+            if est_nav > 0:
+                fund_name = ""
+                fund_info = est_result.get("fund_info", {})
+                if fund_info.get("fund_name"):
+                    fund_name = fund_info["fund_name"]
+                elif fund_info.get("tracker_index"):
+                    fund_name = fund_info["tracker_index"]
+                return FundEstimate(
+                    fund_code=fund_code,
+                    fund_name=fund_name,
+                    estimated_nav=est_nav,
+                    estimated_change_pct=round(est_change, 2),
+                    nav_date=est_result.get("trade_date", ""),
+                    estimate_time=datetime.datetime.now().strftime("%H:%M:%S"),
+                )
+    except Exception:
+        pass
+
     return None
 
 

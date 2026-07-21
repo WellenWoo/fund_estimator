@@ -36,7 +36,7 @@ from fund_realtime import (
 )
 
 # --- Database path ---
-_DB_PATH = os.path.join(_SCRIPT_DIR, '..', 'lof_database', 'lof_master.db')
+_DB_PATH = os.path.join(_SCRIPT_DIR, '..', 'lof_database', 'lof_info.db')
 
 
 # ====================================================================
