@@ -1,0 +1,3 @@
+__pycache__
+*.pyc
+/lof_database/lof_master.db

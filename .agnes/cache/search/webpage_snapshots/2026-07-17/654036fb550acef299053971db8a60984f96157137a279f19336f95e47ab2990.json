@@ -1,0 +1,20 @@
+{
+  "kind": "webpage_snapshot",
+  "url": "https://github.com/MistyBridge/lof-premium-tracker/blob/main/docs/TECH.md",
+  "final_url": "https://github.com/MistyBridge/lof-premium-tracker/blob/main/docs/TECH.md",
+  "status": 200,
+  "read_status": "blocked",
+  "content_type": "text/html; charset=utf-8",
+  "fetched_at": "2026-07-17T06:53:01.562172900+00:00",
+  "title": "lof-premium-tracker/docs/TECH.md at main · MistyBridge/lof-premium-tracker · GitHub",
+  "description": "金快查 全市场LOF基金实时折溢价监控系统 | SPA+渐进式渲染 | Supabase用户中心 | 套利收益计算 - lof-premium-tracker/docs/TECH.md at main · MistyBridge/lof-premium-tracker",
+  "site_name": "GitHub",
+  "published_at": null,
+  "source_type": "source_repo",
+  "text": "",
+  "quote_candidates": [],
+  "word_count": 0,
+  "truncated": false,
+  "blocked": true,
+  "source": "direct_http"
+}
