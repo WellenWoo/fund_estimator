@@ -149,7 +149,11 @@ class MainFrame(wx.Frame):
 
         btn_realtime = wx.Button(toolbar_panel, label="实时行情")
         btn_realtime.Bind(wx.EVT_BUTTON, self.on_realtime_only)
-        tb_sizer.Add(btn_realtime, 0, wx.ALIGN_CENTER_VERTICAL)
+        tb_sizer.Add(btn_realtime, 0, wx.ALIGN_CENTER_VERTICAL | wx.RIGHT, 5)
+
+        btn_export = wx.Button(toolbar_panel, label="导出CSV")
+        btn_export.Bind(wx.EVT_BUTTON, self.on_export_csv)
+        tb_sizer.Add(btn_export, 0, wx.ALIGN_CENTER_VERTICAL)
 
         toolbar_panel.SetSizer(tb_sizer)
         main_sizer.Add(toolbar_panel, 0, wx.EXPAND | wx.ALL, 5)
@@ -376,15 +380,17 @@ class MainFrame(wx.Frame):
 
         total = len(funds)
         self.status_bar_set(f"共 {total} 只基金，开始获取实时行情...")
-        wx.MessageBox(
+        dlg = wx.MessageDialog(
+            self,
             f"将对 {total} 只基金获取实时行情和估算净值，\n"
             "此过程可能需要几分钟，请耐心等待。\n"
             "是否继续？",
             "确认批量获取",
-            wx.YES_NO | wx.ICON_QUESTION,
-            self,
+            wx.YES_NO | wx.NO_DEFAULT | wx.ICON_QUESTION,
         )
-        if not self.IsYes():
+        answer = dlg.ShowModal()
+        dlg.Destroy()
+        if answer != wx.ID_YES:
             self.status_bar_set("已取消")
             return
 
@@ -442,15 +448,17 @@ class MainFrame(wx.Frame):
 
         total = len(funds)
         self.status_bar_set(f"共 {total} 只基金，开始批量计算...")
-        wx.MessageBox(
+        dlg = wx.MessageDialog(
+            self,
             f"将对 {total} 只基金进行批量估值计算，\n"
             "此过程较慢，请耐心等待。\n"
             "是否继续？",
             "确认批量计算",
-            wx.YES_NO | wx.ICON_QUESTION,
-            self,
+            wx.YES_NO | wx.NO_DEFAULT | wx.ICON_QUESTION,
         )
-        if not self.IsYes():
+        answer = dlg.ShowModal()
+        dlg.Destroy()
+        if answer != wx.ID_YES:
             self.status_bar_set("已取消")
             return
 
@@ -517,6 +525,52 @@ class MainFrame(wx.Frame):
         rows = cursor.fetchall()
         conn.close()
         return rows
+
+    # ---- Export CSV ----
+
+    def on_export_csv(self, event):
+        """将当前表格内容导出为 CSV 文件。"""
+        import csv
+
+        if self.grid.GetNumberOfRows() == 0:
+            wx.MessageBox("表格没有数据可导出", "提示", wx.OK | wx.ICON_INFORMATION, self)
+            return
+
+        save_dlg = wx.FileDialog(
+            self,
+            message="保存CSV文件",
+            defaultDir=os.path.join(_SCRIPT_DIR, 'exports'),
+            defaultFile=f"fund_snapshot_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv",
+            wildcard="CSV 文件 (*.csv)|*.csv",
+            style=wx.FD_SAVE | wx.FD_OVERWRITE_PROMPT,
+        )
+        if save_dlg.ShowModal() != wx.ID_OK:
+            save_dlg.Destroy()
+            return
+
+        filepath = save_dlg.GetPath()
+        save_dlg.Destroy()
+
+        try:
+            with open(filepath, 'w', newline='', encoding='utf-8-sig') as f:
+                writer = csv.writer(f)
+                # 表头
+                headers = [col[1] for col in FundGrid.COLUMNS]
+                writer.writerow(headers)
+                # 行数据
+                for row in range(self.grid.GetNumberOfRows()):
+                    values = []
+                    for col in range(self.grid.GetNumberCols()):
+                        values.append(self.grid.GetCellValue(row, col))
+                    writer.writerow(values)
+            wx.MessageBox(
+                f"导出成功!\n已保存到:\n{filepath}",
+                "导出完成",
+                wx.OK | wx.ICON_INFORMATION,
+                self,
+            )
+        except Exception as e:
+            wx.MessageBox(f"导出失败: {str(e)}", "错误", wx.OK | wx.ICON_ERROR, self)
 
     def on_refresh(self, event):
         """F5 快捷刷新: 获取全部实时行情。"""
