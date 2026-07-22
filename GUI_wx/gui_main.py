@@ -575,7 +575,9 @@ class MainFrame(wx.Frame):
         self._run_in_thread(self._do_batch_calculate, total)
 
     def _do_batch_calculate(self, total):
-        """后台线程：批量估值计算。"""
+        """后台线程：并行批量估值计算。"""
+        from concurrent.futures import ThreadPoolExecutor, as_completed
+
         funds = self._fetch_all_funds_basic()
         self._post_status(f"共 {total} 只基金，开始批量计算...")
 
@@ -583,13 +585,12 @@ class MainFrame(wx.Frame):
         self._post_grid_append_rows(total)
 
         today = datetime.now().strftime("%Y-%m-%d")
-        success_count = 0
-        fail_count = 0
 
-        for i, (fund_code, fund_name) in enumerate(funds):
-            progress = f"进度: {i + 1}/{total}  [{fund_code}]"
-            self._post_progress(progress)
+        # 每只基金的结果存到预分配的位置，保证顺序正确
+        results = [None] * total
 
+        def _calc_one(idx, fund_code, fund_name):
+            """单只基金：内部函数（用于 submit）。"""
             try:
                 # 1) 获取场内 + 估算快照
                 snapshot = fetch_fund_snapshot(fund_code)
@@ -602,31 +603,75 @@ class MainFrame(wx.Frame):
                 if est_result.get("success"):
                     t1_nav = f"{est_result.get('t1_nav', 0):.4f}"
                     est_method = est_result.get("method_used") or est_result.get("method", "")
+                    return {
+                        "index": idx,
+                        "row_data": {
+                            "fund_code": fund_code,
+                            "fund_name": fund_name,
+                            "intraday_price": f'{snapshot.get("intraday_price", 0):.4f}',
+                            "intraday_change": f'{snapshot.get("intraday_change_pct", 0):.2f}%',
+                            "est_nav": f'{snapshot.get("estimated_nav", 0):.4f}',
+                            "est_change": f'{snapshot.get("estimate_change_pct", 0):.2f}%',
+                            "premium_pct": f'{snapshot.get("premium_pct", 0):.2f}',
+                            "signal": snapshot.get("signal", ""),
+                            "status": f"T-1:{t1_nav}" + (f" {est_method}" if est_method else "失败"),
+                        },
+                        "success": True,
+                    }
+                else:
+                    return {
+                        "index": idx,
+                        "row_data": {
+                            "fund_code": fund_code,
+                            "fund_name": fund_name,
+                            "intraday_price": f'{snapshot.get("intraday_price", 0):.4f}',
+                            "intraday_change": f'{snapshot.get("intraday_change_pct", 0):.2f}%',
+                            "est_nav": f'{snapshot.get("estimated_nav", 0):.4f}',
+                            "est_change": f'{snapshot.get("estimate_change_pct", 0):.2f}%',
+                            "premium_pct": f'{snapshot.get("premium_pct", 0):.2f}',
+                            "signal": snapshot.get("signal", ""),
+                            "status": "失败",
+                        },
+                        "success": False,
+                    }
+            except Exception as e:
+                return {
+                    "index": idx,
+                    "row_data": {
+                        "fund_code": fund_code,
+                        "fund_name": fund_name,
+                        "status": f"异常: {str(e)[:8]}",
+                    },
+                    "success": False,
+                }
+
+        # 提交任务 + 并行执行，限制并发数避免 API 限频
+        max_workers = min(15, total)
+        submitted_count = 0
+        success_count = 0
+        fail_count = 0
+
+        with ThreadPoolExecutor(max_workers=max_workers) as executor:
+            futures = []
+            for i, (fund_code, fund_name) in enumerate(funds):
+                futures.append(executor.submit(_calc_one, i, fund_code, fund_name))
+
+            for future in as_completed(futures):
+                result = future.result()
+                idx = result["index"]
+                results[idx] = result
+                submitted_count += 1
+
+                if result.get("success"):
                     success_count += 1
                 else:
                     fail_count += 1
 
-                row_data = {
-                    "fund_code": fund_code,
-                    "fund_name": fund_name,
-                    "intraday_price": f'{snapshot.get("intraday_price", 0):.4f}',
-                    "intraday_change": f'{snapshot.get("intraday_change_pct", 0):.2f}%',
-                    "est_nav": f'{snapshot.get("estimated_nav", 0):.4f}',
-                    "est_change": f'{snapshot.get("estimate_change_pct", 0):.2f}%',
-                    "premium_pct": f'{snapshot.get("premium_pct", 0):.2f}',
-                    "signal": snapshot.get("signal", ""),
-                    "status": f"T-1:{t1_nav}" + (f" {est_method}" if est_method else "失败"),
-                }
-                self._post_append_row(i, row_data)
+                current_code = funds[idx][0]
+                self._post_progress(f"进度: {submitted_count}/{total}  [{current_code}]")
 
-            except Exception as e:
-                row_data = {
-                    "fund_code": fund_code,
-                    "fund_name": fund_name,
-                    "status": f"异常: {str(e)[:8]}",
-                }
-                self._post_append_row(i, row_data)
-                fail_count += 1
+                # 将结果写回对应行（按 index 写入固定位置）
+                self._post_append_row(idx, result["row_data"])
 
         self._post_progress("")
         self._post_status(
