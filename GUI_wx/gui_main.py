@@ -532,7 +532,7 @@ class MainFrame(wx.Frame):
         """将当前表格内容导出为 CSV 文件。"""
         import csv
 
-        if self.grid.GetNumberOfRows() == 0:
+        if self.grid.GetNumberRows() == 0:
             wx.MessageBox("表格没有数据可导出", "提示", wx.OK | wx.ICON_INFORMATION, self)
             return
 
@@ -558,7 +558,7 @@ class MainFrame(wx.Frame):
                 headers = [col[1] for col in FundGrid.COLUMNS]
                 writer.writerow(headers)
                 # 行数据
-                for row in range(self.grid.GetNumberOfRows()):
+                for row in range(self.grid.GetNumberRows()):
                     values = []
                     for col in range(self.grid.GetNumberCols()):
                         values.append(self.grid.GetCellValue(row, col))
