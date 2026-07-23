@@ -135,16 +135,31 @@ v_index_full_no_cash   =  T-1 NAV × (1 + 指数涨跌%)
 
 ---
 
-## 下一步计划
+## 多指数通用化改造（2026-07-23）
 
-| 版本 | 计划 | 预期效果 |
-|---|---|---|
-| v2.1 | 加费率自动校准（用前 20 天数据回归最优 cash_drag） | MAE ≤ 0.10 pp |
-| v2.2 | 多基指数并行（创业板指 + 创业板 50 + 创业板综合价格指数加权） | 残差监测更细 |
-| v3.0 | 跨基金推广（沪深 300ETF / 中证 500ETF / 上证 50ETF） | 框架通用化 |
-| v3.1 | 申赎冲击建模（paper_tel §3.5） | 极端申赎日误差不超 0.5 pp |
-| v4.0 | 加上数据源容灾（新浪挂了自动切腾讯/东方财富） | 系统可用性 99.9% |
-| v5.0 | 用机器学习做残差校准（XGBoost on (指数涨跌, 持仓变化, 费率, ...) ） | MAE ≤ 0.05 pp |
+### 解决的问题
+
+1. **硬编码创业板指**：`holdings_based.py` 和 `run_backtest.py` 中 `CYB_INDEX = "sz399006"` 导致所有指数系算法默认使用创业板指，对跟踪沪深 300 / 中证 500 等指数的基金估值失真。
+2. **主动型基金缺适配算法**：现有算法均为被动指数基金设计，主动型基金只能回退到覆盖不足的 `v_top10`。
+
+### 修改内容
+
+| 文件 | 改动 |
+|---|---|
+| `holdings_based.py` | 删除 `CYB_INDEX` 常量，改名为"全指数代理"，labels 去创业板指 |
+| `run_backtest.py` | `load_common_inputs()` 新增 `index_symbol` 参数 |
+| `fund_estimator_index_agent/__init__.py` | `estimate_realtime()` 通过 `query_db_fund_info()` → `resolve_index_symbol()` 注入目标指数 |
+| `daily_close_estimate.py` / `batch_daily_run.py` | CLI 新增 `--index-symbol`，支持 DB 自动检测 |
+| `estimators/__init__.py` | 移除 `CYB_INDEX` 导出 |
+
+### 验证结果
+
+| 基金 | 跟踪指数 | 实际使用 symbol | 2026-07-13 误差(pp) |
+|---|---|---|---|
+| 160223 | 创业板指 399006 | sz399006 | -0.1095 |
+| 160615 | 沪深300 000300 | sh000300 | -0.114 |
+
+两只基金的 MAE 均 < 0.5pp 阈值，验证通过。
 
 ---
 

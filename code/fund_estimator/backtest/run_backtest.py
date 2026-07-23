@@ -1,7 +1,7 @@
 """主回测入口 —— 遍历日期区间，对每个交易日做估值并与官方 NAV 对比。
 
 设计（对齐 ITERATIONS.md）：
-1. 预取全区间：基金历史 NAV、创业板指日线、（可选）成分股日线。
+1. 预取全区间：基金历史 NAV、目标指数日线、（可选）成分股日线。
 2. 用 NAV 的日期集合 ∩ 指数交易日 构建 trading_days，非交易日直接跳过
    （修复 Iteration 3 记录的「非交易日 None-float TypeError」bug）。
 3. 对每个交易日：
@@ -12,6 +12,10 @@
 4. 聚合 MAE / RMSE / MAX / Mean / over_threshold。
 
 本模块既是脚本（python -m / 直接运行），也向 iteration_tracker 暴露 backtest_range。
+
+修改说明（多指数支持）：
+- load_common_inputs() 支持 index_symbol 参数，由调用方根据基金跟踪的指数注入。
+- CLI 默认 fallback 仍为 sz399006（兼容旧用法），但不再硬编码于业务逻辑中。
 """
 
 from __future__ import annotations
@@ -33,10 +37,11 @@ from fund_estimator.data_sources.cache import CsvCache  # noqa: E402
 from fund_estimator.data_sources.eastmoney.nav_history import fetch_nav_history  # noqa: E402
 from fund_estimator.data_sources.eastmoney.holdings_full import fetch_full_holdings  # noqa: E402
 from fund_estimator.data_sources.sina.history import fetch_kline  # noqa: E402
-from fund_estimator.estimators.holdings_based import estimate, CYB_INDEX, DEFAULT_METHOD, METHODS  # noqa: E402
+from fund_estimator.estimators.holdings_based import estimate, DEFAULT_METHOD, METHODS  # noqa: E402
 
 
 FUND_CODE = "160223"
+DEFAULT_INDEX_SYMBOL = "sz399006"   # CLI fallback，不再作为业务硬编码
 
 
 # --------------------------------------------------------------------------- #
@@ -49,7 +54,8 @@ class CommonInputs:
     fund_code: str
     nav_rows: list[dict]                 # 升序 [{date, nav, ...}]
     nav_map: dict[str, float]            # date -> nav
-    index_close: dict[str, float]        # date -> 创业板指收盘
+    index_close: dict[str, float]        # date -> 目标指数收盘
+    index_symbol: str                    # 实际使用的指数代码（如 sz399006, sh000300）
     trading_days: list[str]              # 有 NAV 的交易日（升序）
     holdings: list = field(default_factory=list)   # 完整持仓（FundHolding）
     stock_quote_close: dict[str, dict[str, float]] = field(default_factory=dict)
@@ -65,8 +71,17 @@ def load_common_inputs(
     with_stocks: bool = False,
     cache: Optional[CsvCache] = None,
     force: bool = False,
+    index_symbol: Optional[str] = None,
 ) -> CommonInputs:
     """预取回测所需数据。
+
+    Parameters
+    ----------
+    index_symbol : str, optional
+        要抓取日线的指数 symbol，如 "sz399006" 或 "sh000300"。
+        如果为 None，则回退到 FUND_CODE 默认对应的 DEFAULT_INDEX_SYMBOL。
+        注意：本函数不自动从数据库读取 tracker_index_code，
+        调用方应在外部完成基金信息解析后传入对应 symbol。
 
     with_stocks=True 时才抓成分股日线（持仓还原类算法需要），否则跳过省流量。
     """
@@ -75,7 +90,9 @@ def load_common_inputs(
     nav_rows = fetch_nav_history(fund_code, start, end, cache=cache, force=force)
     nav_map = {r["date"]: r["nav"] for r in nav_rows}
 
-    index_rows = fetch_kline(CYB_INDEX, cache=cache, force=force)
+    # 使用传入的 index_symbol 或默认 fallback
+    target_symbol = index_symbol or DEFAULT_INDEX_SYMBOL
+    index_rows = fetch_kline(target_symbol, cache=cache, force=force)
     index_close = {r["date"]: r["close"] for r in index_rows}
 
     # 交易日 = 有 NAV 且落在区间内
@@ -100,6 +117,7 @@ def load_common_inputs(
         nav_rows=nav_rows,
         nav_map=nav_map,
         index_close=index_close,
+        index_symbol=target_symbol,
         trading_days=tdays,
         holdings=holdings,
         stock_quote_close=stock_close,
@@ -173,7 +191,6 @@ def estimate_for_day(
     elif realtime and idx_t1 and idx_t1 > 0:
         # 实时模式：当天指数数据缺失，保留 index_change_pct 为 None
         # 让 estimate_realtime 中的实时指数回退逻辑来处理
-        # index_change_pct 保持为 None
         pass
 
     # index 系算法在缺指数时无法估
@@ -276,6 +293,8 @@ def main(argv: Optional[list[str]] = None) -> int:
     parser = argparse.ArgumentParser(description="主回测入口（持仓还原 / 指数代理）")
     parser.add_argument("--fund", default=FUND_CODE)
     parser.add_argument("--method", default=DEFAULT_METHOD, choices=METHODS)
+    parser.add_argument("--index-symbol", default=None,
+                        help="目标指数 symbol，如 sz399006 / sh000300；默认 sz399006")
     parser.add_argument("--start", default="2026-04-25")
     parser.add_argument("--end", default="2026-07-14")
     parser.add_argument("--force", action="store_true", help="忽略缓存强制重取")
@@ -285,9 +304,11 @@ def main(argv: Optional[list[str]] = None) -> int:
     inputs = load_common_inputs(
         args.fund, args.start, args.end,
         with_holdings=True, with_stocks=need_stocks, force=args.force,
+        index_symbol=args.index_symbol,
     )
     result = backtest_range(inputs, args.method, args.start, args.end)
     stats = result.stats()
+    stats["index_symbol"] = inputs.index_symbol
     import json
     print(json.dumps(stats, ensure_ascii=False, indent=2))
     return 0

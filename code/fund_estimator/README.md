@@ -1,8 +1,33 @@
-# 基金实时估值程序 — LOF 160223 实战记录
+# 基金实时估值程序
 
 > 一个**用持仓 + 实时行情自行计算基金盘中估值**的 Python 程序。
 > 不是从网站抄官方估值，而是用数据真正"算"出来。
-> 标的样本：国泰创业板指数 (LOF) A，代码 `160223`，跟踪创业板指数 (399006)。
+> 初始验证标的：国泰创业板指数 (LOF) A，代码 `160223`，跟踪创业板指数 (399006)。
+> 当前支持：**多基金通用**——根据基金类型自动匹配跟踪指数或采用持仓还原法。
+
+---
+
+## 多基金支持（多指数通用化）
+
+| 基金类型 | 算法选择 | 指数来源 |
+|---|---|---|
+| 被动指数型 (is_passive=true) | v_index_full_no_cash | 数据库中 `tracker_index_code` → `resolve_index_symbol()` → `load_common_inputs(index_symbol=...)` |
+| 指数增强型 / 混合型基金 | v_index_blend | 基准指数（由基金信息解析） |
+| 主动管理型基金 | v_top10 / v_residual_uncovered | 无需外部指数 |
+
+### 自动检测流程
+
+```
+fund_code (如 160615)
+    ↓ query_db_fund_info()
+is_passive=True, tracker_index_code="000300"
+    ↓ resolve_index_symbol("中证500", "000300")
+index_symbol = "sh000300"
+    ↓ load_common_inputs(index_symbol=...)
+index_close = fetch_kline("sh000300")  # 中证500日线
+    ↓ estimate(method="v_index_full_no_cash", index_change_pct=...)
+估算净值 = T-1 NAV × (1 + 中证500涨跌%)
+```
 
 ---
 

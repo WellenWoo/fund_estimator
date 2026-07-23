@@ -14,8 +14,8 @@
 
 ┌────────────────────────┬───────────────────────────────────────────────┐
 │ v_top10                │ Σ w_i·r_i / Σ w_i（仅前 10 大，覆盖 ~53%）      │
-│ v_index_full           │ 直接用创业板指涨跌%，再扣 cash_drag(0.1%/天基准) │
-│ v_index_full_no_cash ⭐│ 直接用创业板指涨跌%，不扣任何费率（主推）        │
+│ v_index_full           │ 直接用目标指数涨跌%，再扣 cash_drag(0.1%/天基准) │
+│ v_index_full_no_cash ⭐│ 直接用目标指数涨跌%，不扣任何费率（主推）        │
 │ v_index_blend          │ covered 用持仓还原 + uncovered 用指数代理        │
 │ v_residual_uncovered   │ covered 用持仓还原 + uncovered 用 covered 均值   │
 └────────────────────────┴───────────────────────────────────────────────┘
@@ -28,7 +28,6 @@ from typing import Optional
 from ..core.models import FundHolding, RealtimeQuote, NAVEstimate
 
 
-CYB_INDEX = "sz399006"   # 创业板指
 DEFAULT_METHOD = "v_index_full_no_cash"
 
 # cash_drag：ITERATIONS.md Iteration 1 用 -0.001/天（≈0.36% 年化）
@@ -44,9 +43,9 @@ METHODS = [
 
 METHOD_LABELS = {
     "v_top10": "持仓还原 top10",
-    "v_index_full": "创业板指全代理 (含 cash_drag)",
-    "v_index_full_no_cash": "创业板指全代理 (无 cash_drag) ⭐",
-    "v_index_blend": "top10 + 创业板指混合",
+    "v_index_full": "全指数代理 (含 cash_drag)",
+    "v_index_full_no_cash": "全指数代理 (无 cash_drag) ⭐",
+    "v_index_blend": "top10 + 指数混合",
     "v_residual_uncovered": "top10 + uncovered 代理",
 }
 
@@ -129,11 +128,12 @@ def estimate(
     method:
         5 种算法之一。
     index_change_pct:
-        创业板指当日涨跌幅（%）。index 系算法必需。
+        目标指数当日涨跌幅（%），由调用方根据基金跟踪的指数注入。
+        指数系算法必需。
     holdings / quotes_today / quotes_t1:
         持仓还原类算法必需。
     stock_position:
-        股票总仓位（0~1），默认 0.95（LOF 160223 股票 ≥85%，实际近满仓）。
+        股票总仓位（0~1），默认 0.95。
     """
     holdings = holdings or []
     quotes_today = quotes_today or {}
@@ -150,7 +150,7 @@ def estimate(
         detail = {"weighted_return": weighted, "covered_weight": cov_w}
         return _make_estimate(fund_code, today, t1_date, t1_nav, change, method, detail)
 
-    # ---- 2. 创业板指全代理（含 cash_drag） ------------------------------- #
+    # ---- 2. 全指数代理（含 cash_drag） ----------------------------------- #
     if method == "v_index_full":
         if index_change_pct is None:
             raise ValueError("v_index_full requires index_change_pct")
@@ -159,7 +159,7 @@ def estimate(
         detail = {"index_change_pct": index_change_pct, "cash_drag_pct": CASH_DRAG_DAILY * 100.0}
         return _make_estimate(fund_code, today, t1_date, t1_nav, change, method, detail)
 
-    # ---- 3. 创业板指全代理（无 cash_drag）⭐ 主推 ------------------------ #
+    # ---- 3. 全指数代理（无 cash_drag）⭐ 主推 --------------------------- #
     if method == "v_index_full_no_cash":
         if index_change_pct is None:
             raise ValueError("v_index_full_no_cash requires index_change_pct")
@@ -167,7 +167,7 @@ def estimate(
         detail = {"index_change_pct": index_change_pct}
         return _make_estimate(fund_code, today, t1_date, t1_nav, change, method, detail)
 
-    # ---- 4. top10 + 创业板指混合 ----------------------------------------- #
+    # ---- 4. top10 + 指数混合 -------------------------------------------- #
     if method == "v_index_blend":
         if index_change_pct is None:
             raise ValueError("v_index_blend requires index_change_pct")
@@ -183,7 +183,7 @@ def estimate(
         }
         return _make_estimate(fund_code, today, t1_date, t1_nav, change, method, detail)
 
-    # ---- 5. top10 + uncovered 用 covered 均值代理 ------------------------ #
+    # ---- 5. top10 + uncovered 用 covered 均值代理 ----------------------- #
     if method == "v_residual_uncovered":
         weighted, cov_w = _weighted_holdings_return(holdings, quotes_today, quotes_t1)
         avg_r = (weighted / cov_w) if cov_w > 0 else 0.0
