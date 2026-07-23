@@ -3,12 +3,11 @@
 通用化的被动指数型基金实时估值引擎。用户只需输入任意基金代码（如 160223、
 159915、510300 等），Agent 自动完成以下流程：
 
-    1. 查询基金基本信息（名称、类型、跟踪指数）
-    2. 判断是否为被动指数型（指数型 / LOF / ETF）
-    3. 选择估值算法：
+    1. 读取本地数据库 master_lof 判断基金是被动型还是主动型
+    2. 选择估值算法：
        - 被动指数型 → 参考指数法 (v_index_full_no_cash)
        - 主动管理型 → 持仓还原法 (v_top10 / v_index_blend)
-    4. 执行估值并输出结果
+    3. 执行估值并输出结果
 
 设计原则：
 - 复用 fund_estimator 现有模块（models, data_sources, estimators, backtest）
@@ -33,6 +32,7 @@ import argparse
 import json
 import os
 import re
+import sqlite3
 import sys
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
@@ -45,6 +45,9 @@ _THIS = os.path.dirname(os.path.abspath(__file__))
 _CODE_ROOT = os.path.dirname(os.path.dirname(_THIS))  # code/
 if _CODE_ROOT not in sys.path:
     sys.path.insert(0, _CODE_ROOT)
+
+# Database path: lof_database/lof_info.db relative to project root
+_DB_PATH = os.path.join(_CODE_ROOT, '..', 'lof_database', 'lof_info.db')
 
 from fund_estimator.core.models import (  # noqa: E402
     FundHolding,
@@ -162,13 +165,21 @@ INDEX_SYMBOL_MAP = {
     "中证畜牧养殖": ("000960", "sh"),
 }
 
-# 基金类型关键词（用于判断是否为被动指数型）
-_PASSIVE_KEYWORDS = [
-    "指数型", "指数", "LOF", "ETF", "指数增强",
-    "指数(lof)", "指数型(LOF)", "指数型(ETF)",
-    "指数型（LOF）", "指数型（ETF）",
-    "被动指数", "被动型指数",
-]
+# 本地 SQLite 数据库路径
+DB_PATH = _DB_PATH
+
+
+def get_db_connection() -> sqlite3.Connection:
+    """打开本地 lof_info.db 连接。如果数据库不存在则返回 None。"""
+    if not os.path.exists(DB_PATH):
+        return None
+    try:
+        conn = sqlite3.connect(DB_PATH, timeout=5)
+        conn.row_factory = sqlite3.Row
+        return conn
+    except sqlite3.OperationalError:
+        return None
+
 
 # ---------------------------------------------------------------------------
 # Data Classes
@@ -202,11 +213,11 @@ class FundInfo:
 
 
 # ---------------------------------------------------------------------------
-# 1. Fund Information Query
+# 1. Fund Information Query from local database
 # ---------------------------------------------------------------------------
 
 def fetch_fund_list() -> list[dict]:
-    """从天天基金获取全市场基金代码列表。
+    """从天天基金获取全市场基金代码列表。（保留以兼容外部调用）
 
     Returns
     -------
@@ -218,11 +229,10 @@ def fetch_fund_list() -> list[dict]:
     except RuntimeError:
         return []
 
-    # Find 'var r = [' and match balanced brackets to extract the full array
     m = re.search(r'var\s+r\s*=\s*\[', text)
     if not m:
         return []
-    start = m.end() - 1  # position of '['
+    start = m.end() - 1
     depth = 0
     end = start
     for i in range(start, len(text)):
@@ -243,21 +253,17 @@ def fetch_fund_list() -> list[dict]:
     results = []
     for item in data:
         if isinstance(item, (list, tuple)) and len(item) >= 4:
-            # Format: [code, pinyin, name, type, full_name, ...]
             results.append({
                 "fundcode": str(item[0]),
                 "fundname": str(item[2]),
                 "type": str(item[3]),
             })
         elif isinstance(item, dict):
-            # Old format: {db:..., mc:...}
             results.append({
                 "fundcode": str(item.get("db", item.get("fundcode", ""))),
                 "fundname": str(item.get("mc", item.get("fundname", ""))),
                 "type": str(item.get("type", "")),
             })
-
-    return results
 
     return results
 
@@ -279,6 +285,9 @@ def get_fund_list_cache() -> dict[str, dict]:
 
 def query_fund_basic_info(fund_code: str) -> dict:
     """查询基金基本信息（名称、类型等）从天天基金 fundgz 接口。
+
+    .. deprecated::
+        已不再在实时估值链路中调用此函数。保留以兼容外部直接调用。
 
     Returns
     -------
@@ -303,6 +312,9 @@ def query_fund_basic_info(fund_code: str) -> dict:
 def query_fund_detail(fund_code: str) -> dict:
     """查询基金详细信息（跟踪指数、基金类型子类等）。
 
+    .. deprecated::
+        已不再在实时估值链路中调用此函数。保留以兼容外部直接调用。
+
     从东方财富 pingzhongdata 页面提取结构化信息。
     注意：JS 变量名可能随东方财富改版而变化，此处做多重兼容。
     """
@@ -311,17 +323,13 @@ def query_fund_detail(fund_code: str) -> dict:
         url = FUND_INFO_URL.format(code=fund_code)
         text = http_get(url, encoding="utf-8", referer="http://fund.eastmoney.com/")
 
-        # Helper: extract JS variable value (handles both quoted and unquoted)
         def _extract(var_name: str) -> Optional[str]:
-            # Try double-quoted
             m = re.search(rf'var\s+{var_name}\s*=\s*"([^"]*)"', text)
             if m:
                 return m.group(1).strip()
-            # Try single-quoted
             m = re.search(rf"var\s+{var_name}\s*=\s*'([^']*)'", text)
             if m:
                 return m.group(1).strip()
-            # Try unquoted
             m = re.search(rf'var\s+{var_name}\s*=\s*([^\s;"\n]+)', text)
             return m.group(1).strip() if m else None
 
@@ -334,7 +342,6 @@ def query_fund_detail(fund_code: str) -> dict:
         info["fundname"] = _extract("fundname") or ""
         info["fundfullname"] = _extract("fundfullname") or ""
 
-        # 兼容新版东方财富 pingzhongdata 变量名
         if not info["fundname"]:
             info["fundname"] = _extract("fS_name") or ""
         if not info["fundcode"]:
@@ -346,14 +353,59 @@ def query_fund_detail(fund_code: str) -> dict:
     return info
 
 
+def query_db_fund_info(fund_code: str) -> Optional[FundInfo]:
+    """从本地 SQLite 数据库 master_lof 表查询基金信息。
+
+    返回 FundInfo 对象。若基金不在数据库中则返回 None。
+
+    核心逻辑：
+    - is_passive=1 表示该基金是被动指数型基金
+    - tracker_index / tracker_index_code 为跟踪的指数名称和代码
+
+    Parameters
+    ----------
+    fund_code : str
+        6位基金代码
+
+    Returns
+    -------
+    FundInfo or None
+    """
+    conn = get_db_connection()
+    if conn is None:
+        return None
+
+    try:
+        row = conn.execute(
+            "SELECT fund_name, fund_type, tracker_index, tracker_index_code, is_passive "
+            "FROM master_lof WHERE fund_code = ?",
+            (fund_code,),
+        ).fetchone()
+    finally:
+        conn.close()
+
+    if row is None:
+        return None
+
+    info = FundInfo(fund_code=fund_code)
+    info.fund_name = row["fund_name"] or ""
+    info.fund_type = row["fund_type"] or ""
+    info.tracker_index = row["tracker_index"] or ""
+    info.tracker_index_code = row["tracker_index_code"] or ""
+    info.is_passive = bool(row["is_passive"])
+    return info
+
+
 def classify_fund_type(fund_code: str) -> FundInfo:
     """综合判断基金类型，返回 FundInfo 对象。
 
     流程：
-    1. 从天天基金 fundgz 接口获取基本信息（名称最可靠）
-    2. 从东方财富 pingzhongdata 获取详细信息
-    3. 判断是否为被动指数型基金
-    4. 从基金代码列表获取补充信息
+    1. **优先**从本地数据库 master_lof 表读取被动/主动型标识和跟踪指数（零网络请求）
+    2. 若数据库中没有该基金，回退到联网查询：
+       - 天天基金 fundgz 接口获取基金名称/类型
+       - 东方财富 pingzhongdata 获取详细信息
+       - 基金代码列表补充信息
+    3. 最终判定是否被动指数型
 
     Returns
     -------
@@ -361,7 +413,20 @@ def classify_fund_type(fund_code: str) -> FundInfo:
     """
     info = FundInfo(fund_code=fund_code)
 
-    # Step 1: 天天基金 fundgz（最可靠的基金名称来源）
+    # Step 1: 优先从本地数据库读取（零网络请求）
+    db_info = query_db_fund_info(fund_code)
+    if db_info is not None:
+        info.fund_name = db_info.fund_name
+        info.fund_type = db_info.fund_type
+        info.tracker_index = db_info.tracker_index
+        info.tracker_index_code = db_info.tracker_index_code
+        info.is_passive = db_info.is_passive
+        # 本地数据库已有完整且可靠的被动型标识，直接返回
+        return info
+
+    # Step 2: 数据库缺失时的回退方案（联网查询）
+
+    # Step 2a: 天天基金 fundgz（最可靠的基金名称来源）
     basic = query_fund_basic_info(fund_code)
     if basic.get("fundname"):
         info.fund_name = basic["fundname"]
@@ -370,7 +435,7 @@ def classify_fund_type(fund_code: str) -> FundInfo:
     if basic.get("manager"):
         info.manager = basic["manager"]
 
-    # Step 2: 东方财富 pingzhongdata（兼容新旧格式）
+    # Step 2b: 东方财富 pingzhongdata（兼容新旧格式）
     detail = query_fund_detail(fund_code)
     if detail.get("fundname") and not info.fund_name:
         info.fund_name = detail["fundname"]
@@ -387,7 +452,7 @@ def classify_fund_type(fund_code: str) -> FundInfo:
     if detail.get("tracker_index_code") and not info.tracker_index_code:
         info.tracker_index_code = detail["tracker_index_code"]
 
-    # Step 3: 基金代码列表
+    # Step 2c: 基金代码列表
     flist = get_fund_list_cache()
     if fund_code in flist:
         fi = flist[fund_code]
@@ -396,7 +461,7 @@ def classify_fund_type(fund_code: str) -> FundInfo:
         if not info.fund_type:
             info.fund_type = fi.get("type", "")
 
-    # Step 4: 判断是否为被动指数型基金
+    # Step 3: 判断是否为被动指数型基金
     info.is_passive = _is_passive_index_fund(info)
 
     return info
@@ -405,51 +470,46 @@ def classify_fund_type(fund_code: str) -> FundInfo:
 def _is_passive_index_fund(info: FundInfo) -> bool:
     """判断基金是否为被动指数型。
 
-    判断规则（综合多个信号）：
-    1. fund_name 包含"指数"和"LOF/ETF"（最强信号）
-    2. fund_type 包含"指数型"
-    3. fund_subtype 包含"指数"、"LOF"、"ETF"
-    4. tracker_index 非空
-    5. 基金代码列表中的 type 字段
+    判断规则（仅当数据库缺失时才使用此逻辑，此时信号来自联网查询）：
+    1. tracker_index 非空 → 强信号（权重 3）
+    2. fund_type 包含"指数型" → 中等信号（权重 1）
+    3. fund_name 包含"指数"和"LOF/ETF" → 强信号（权重 2）
+    4. fund_subtype 包含"指数"且不含"增强"/"混合" → 中等信号（权重 1）
 
-    至少有 2 个信号认为是被动指数型。
+    注意：单纯出现 "LOF" 不足以判定为被动型。LOF 只是交易场所形式，
+    LOF 可以是指数基金也可以是主动管理型基金。
+
+    Returns
+    -------
+    bool
     """
     signals = 0
 
-    # Signal 1: fund_name 包含"指数"（强信号，权重 2）
-    if info.fund_name:
-        if "指数" in info.fund_name:
-            signals += 2
-            # 如果还包含 LOF/ETF，额外加分
-            if "LOF" in info.fund_name or "ETF" in info.fund_name or "lof" in info.fund_name or "etf" in info.fund_name:
-                signals += 1
+    # Signal 1: 有跟踪指数（最强信号）
+    if info.tracker_index and info.tracker_index != "未知指数":
+        signals += 3
 
-    # Signal 2: fund_type 包含指数型关键词
+    # Signal 2: fund_name 包含"指数"（强信号）
+    if info.fund_name and "指数" in info.fund_name:
+        signals += 2
+        if "LOF" in info.fund_name or "ETF" in info.fund_name:
+            signals += 1
+
+    # Signal 3: fund_type 包含指数型关键词
     if info.fund_type:
-        for kw in _PASSIVE_KEYWORDS:
+        for kw in ["指数型", "指数"]:
             if kw in info.fund_type:
                 signals += 1
                 break
 
-    # Signal 3: fund_subtype 包含指数/LOF/ETF
+    # Signal 4: fund_subtype 包含指数/LOF/ETF
+    # 排除含有"增强"、"混合"的 subtype（这些不是纯被动）
     if info.fund_subtype:
-        for kw in ["指数", "LOF", "ETF", "lof", "etf"]:
-            if kw in info.fund_subtype:
-                signals += 1
-                break
-
-    # Signal 4: 有跟踪指数（高权重）
-    if info.tracker_index and info.tracker_index != "未知指数":
-        signals += 2
-
-    # Signal 5: 基金代码列表中的 type 字段
-    flist = get_fund_list_cache()
-    if info.fund_code in flist:
-        ft = flist[info.fund_code].get("type", "").lower()
-        if "index" in ft or "指数" in ft:
+        subtype_lower = info.fund_subtype.lower()
+        if "指数" in info.fund_subtype and "增强" not in info.fund_subtype:
             signals += 1
 
-    # 至少有 2 个信号认为是被动指数型
+    # 至少 2 个信号才认为是被动指数型
     return signals >= 2
 
 
@@ -682,7 +742,7 @@ def estimate_realtime(
     """
     cache = CsvCache()
 
-    # Step 1: 查询基金信息
+    # Step 1: 查询基金信息（优先从本地数据库读取，零网络请求）
     fund_info = classify_fund_type(fund_code)
 
     # Step 2: 获取持仓数据
