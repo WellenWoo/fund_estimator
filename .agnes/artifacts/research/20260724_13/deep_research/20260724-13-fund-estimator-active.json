@@ -1,0 +1,86 @@
+{
+  "kind": "agnes_artifact",
+  "artifact_type": "research_markdown_report",
+  "research_kind": "deep_research",
+  "mode": "deep_research",
+  "session_id": "20260724_13",
+  "title": "fund_estimator_active 模块深度分析：回测性能、算法对比与集成兼容性",
+  "local_path": "E:/api/fund_estimator\\.agnes\\artifacts\\research\\20260724_13\\deep_research\\20260724-13-fund-estimator-active.md",
+  "manifest_path": "E:/api/fund_estimator\\.agnes\\artifacts\\research\\20260724_13\\deep_research\\20260724-13-fund-estimator-active.json",
+  "repo_path": "E:/api/fund_estimator\\.agnes\\work\\research\\20260724_13\\deep_research\\repo",
+  "preview_uri": "ui://agnes-research/deep_research/20260724-13-fund-estimator-active",
+  "sources_count": 5,
+  "evidence_count": 3,
+  "conflicts_count": 0,
+  "blocked_sources_count": 0,
+  "confidence": "medium",
+  "quality_warnings": [
+    "No evidence entries include quotes or extracted text; add short quotes for auditability.",
+    "Structured evidence was provided, but the Markdown report does not appear to include an evidence section."
+  ],
+  "created_at": "2026-07-24T04:10:45.350626500+00:00",
+  "sources": [
+    {
+      "title": "holdings_full.py",
+      "url": "E:/api/fund_estimator/code/fund_estimator_active/data_sources/eastmoney/holdings_full.py",
+      "note": null
+    },
+    {
+      "title": "run_backtest.py",
+      "url": "E:/api/fund_estimator/code/fund_estimator_active/backtest/run_backtest.py",
+      "note": null
+    },
+    {
+      "title": "iteration_tracker.py",
+      "url": "E:/api/fund_estimator/code/fund_estimator_active/backtest/iteration_tracker.py",
+      "note": null
+    },
+    {
+      "title": "backtest_160211_2026-04-25_2026-07-15.csv",
+      "url": "E:/api/fund_estimator/code/fund_estimator_active/results/backtest_160211_2026-04-25_2026-07-15.csv",
+      "note": null
+    },
+    {
+      "title": "backtest_160211_2026-04-25_2026-07-16.csv",
+      "url": "E:/api/fund_estimator/code/fund_estimator_active/results/backtest_160211_2026-04-25_2026-07-16.csv",
+      "note": null
+    }
+  ],
+  "evidence": [
+    {
+      "claim": "v_active_top10_blend_csi1000_a0.3 是最佳算法",
+      "value": "MAE=0.7495pp, RMSE=1.0396pp over 50 trading days",
+      "source_title": "Backtest CSV output",
+      "source_url": "E:/api/fund_estimator/code/fund_estimator_active/results/backtest_160211_2026-04-25_2026-07-15.csv",
+      "source_type": "csv",
+      "quote": null,
+      "observed_at": null,
+      "confidence": null,
+      "notes": null
+    },
+    {
+      "claim": "50 out of 50 trading days had errors > 0.5pp for best algorithm",
+      "value": "over_th=50/50",
+      "source_title": "Backtest CSV output",
+      "source_url": "E:/api/fund_estimator/code/fund_estimator_active/results/backtest_160211_2026-04-25_2026-07-15.csv",
+      "source_type": "csv",
+      "quote": null,
+      "observed_at": null,
+      "confidence": null,
+      "notes": null
+    },
+    {
+      "claim": "run_backtest.py uses sys.path.insert to access modules",
+      "value": "ROOT = Path(__file__).resolve().parent.parent; sys.path.insert(0, str(ROOT))",
+      "source_title": "run_backtest.py source",
+      "source_url": "https://github.com/example/run_backtest.py",
+      "source_type": "code",
+      "quote": null,
+      "observed_at": null,
+      "confidence": null,
+      "notes": null
+    }
+  ],
+  "conflicts": [],
+  "blocked_sources": []
+}

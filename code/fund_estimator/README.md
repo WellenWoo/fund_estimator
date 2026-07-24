@@ -3,17 +3,26 @@
 > 一个**用持仓 + 实时行情自行计算基金盘中估值**的 Python 程序。
 > 不是从网站抄官方估值，而是用数据真正"算"出来。
 > 初始验证标的：国泰创业板指数 (LOF) A，代码 `160223`，跟踪创业板指数 (399006)。
-> 当前支持：**多基金通用**——根据基金类型自动匹配跟踪指数或采用持仓还原法。
+> 当前支持：**多基金通用**——根据基金类型自动匹配跟踪指数或采用主动基金估值算法。
 
 ---
 
-## 多基金支持（多指数通用化）
+## 多基金支持（多指数通用化 + 主动基金算法）
 
-| 基金类型 | 算法选择 | 指数来源 |
+### 被动/指数型基金 (is_passive=true)
+
+| 算法 | 说明 | MAE (pp) |
 |---|---|---|
-| 被动指数型 (is_passive=true) | v_index_full_no_cash | 数据库中 `tracker_index_code` → `resolve_index_symbol()` → `load_common_inputs(index_symbol=...)` |
-| 指数增强型 / 混合型基金 | v_index_blend | 基准指数（由基金信息解析） |
-| 主动管理型基金 | v_top10 / v_residual_uncovered | 无需外部指数 |
+| v_index_full_no_cash ⭐ | 目标指数涨跌直接代理 | ~0.11 |
+
+### 主动管理型基金 (is_passive=false)
+
+| 算法 | 说明 | MAE (pp) |
+|---|---|---|
+| v_active_top10_blend ⭐ | top10 真实 + α×长尾×bench(csi1000) | ~0.75 |
+| v_active_bench_csi1000 | 纯中证1000 基准代理 | ~0.71 |
+| v_active_alpha | top10 + 长尾×(bench + 历史alpha) | ~0.72 |
+| v_active_top10 | 纯前10大持仓还原 | ~2.15 |
 
 ### 自动检测流程
 

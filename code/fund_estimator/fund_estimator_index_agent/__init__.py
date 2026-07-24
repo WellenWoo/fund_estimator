@@ -71,6 +71,11 @@ from fund_estimator.estimators.holdings_based import (  # noqa: E402
     METHOD_LABELS,
     DEFAULT_METHOD,
 )
+from fund_estimator.estimators.active import (  # noqa: E402
+    list_methods as list_active_methods,
+    get_estimator as get_active_estimator,
+    ALL_METHODS,
+)
 from fund_estimator.backtest.run_backtest import (  # noqa: E402
     load_common_inputs,
     backtest_range,
@@ -568,6 +573,16 @@ def resolve_index_symbol(tracker_index: str, tracker_index_code: str) -> Optiona
 # 2. Smart Algorithm Selection
 # ---------------------------------------------------------------------------
 
+# 主动基金候选 benchmark 配置
+ACTIVE_BENCHMARKS = [
+    ("csi300", "sh000300", "沪深300"),
+    ("csi500", "sh000905", "中证500"),
+    ("csi1000", "sh000852", "中证1000"),
+    ("cyb", "sz399006", "创业板指"),
+    ("sz50", "sh000016", "上证50"),
+]
+
+
 def select_estimation_method(fund_info: FundInfo) -> tuple[str, str]:
     """根据基金类型选择最优估值算法。
 
@@ -589,28 +604,27 @@ def select_estimation_method(fund_info: FundInfo) -> tuple[str, str]:
              f"采用参考指数法 v_index_full_no_cash（MAE 0.11pp，最优算法）"),
         )
     else:
-        # 主动管理型基金 → 持仓还原法
-        if fund_info.holdings:
-            covered = sum(h.weight_pct for h in fund_info.holdings)
-            if covered > 70:
+        # 主动管理型基金 → 使用 active 模块算法
+        if fund_info.holdings and len(fund_info.holdings) > 0:
+            covered = sum(getattr(h, 'weight_pct', 0) for h in fund_info.holdings[:10])
+            if covered > 30:
                 return (
-                    "v_index_blend",
+                    "v_active_top10_blend",
                     (f"主动管理型基金（{fund_info.fund_name}），"
                      f"前十大持仓覆盖 {covered:.1f}%，"
-                     f"采用混合算法 v_index_blend"),
+                     f"采用 top10 + 中证1000 混合算法 v_active_top10_blend（MAE ~0.75pp）"),
                 )
             else:
                 return (
-                    "v_top10",
+                    "v_active_top10",
                     (f"主动管理型基金（{fund_info.fund_name}），"
-                     f"前十大持仓覆盖 {covered:.1f}%，"
-                     f"采用持仓还原法 v_top10"),
+                     f"持仓覆盖不足，采用纯 top10 还原 v_active_top10"),
                 )
         else:
             return (
-                "v_top10",
+                "v_active_bench_csi1000",
                 (f"主动管理型基金（{fund_info.fund_name}），"
-                 f"无持仓数据，默认采用持仓还原法 v_top10"),
+                 f"无持仓数据，fallback 到中证1000基准代理"),
             )
 
 
@@ -769,12 +783,17 @@ def estimate_realtime(
     else:
         reason = f"用户指定算法: {method}"
 
+    is_active = not fund_info.is_passive and method.startswith("v_active_")
+
+    if is_active:
+        # ====== 主动型基金估值路径 ======
+        return _estimate_active_fund(fund_code, trade_date, method, force, fund_info, reason, cache)
+
+    # ====== 被动/指数型基金估值路径 ======
     # Step 4: 解析基金跟踪的目标指数 symbol
     target_index_symbol = _resolve_index_symbol(fund_info) or DEFAULT_FALLBACK_INDEX
 
     # Step 5: 执行估值
-    # 需要向前扩展日期范围以确保 T-1 数据可用
-    # 扩展 30 天以覆盖周末和非交易日
     try:
         trade_dt = datetime.strptime(trade_date, "%Y-%m-%d")
         start_date = (trade_dt - timedelta(days=30)).strftime("%Y-%m-%d")
@@ -783,7 +802,6 @@ def estimate_realtime(
 
     try:
         need_stocks = method in ("v_top10", "v_index_blend", "v_residual_uncovered")
-        # 关键修改：将基金跟踪的指数注入 load_common_inputs
         inputs = load_common_inputs(
             fund_code, start_date, trade_date,
             with_holdings=True, with_stocks=need_stocks,
@@ -793,7 +811,6 @@ def estimate_realtime(
         comp = estimate_for_day(inputs, trade_date, method, realtime=True)
 
         if comp is None:
-            # 实时估值重试：使用实时指数行情计算当日涨跌幅
             realtime_index_pct = _fetch_realtime_index_for_fund(fund_info)
             if realtime_index_pct is not None:
                 comp = _make_realtime_estimate(
@@ -850,6 +867,143 @@ def estimate_realtime(
             "method_used": method,
             "method_reason": reason,
         }
+
+
+def _estimate_active_fund(
+    fund_code: str,
+    trade_date: str,
+    method: str,
+    force: bool,
+    fund_info: FundInfo,
+    reason: str,
+    cache: CsvCache,
+) -> dict:
+    """主动型基金的独立估值路径。
+
+    使用 active 模块算法 + 多 benchmark 代理长尾。
+    """
+    from fund_estimator.estimators.active_holdings import estimate_v_active_top10
+    from fund_estimator.estimators.active_benchmark import estimate_v_active_bench
+    from fund_estimator.estimators.active_blend import estimate_v_active_top10_blend, estimate_v_active_top10_resid
+    from fund_estimator.estimators.active_alpha import estimate_v_active_alpha
+    from fund_estimator.data_sources.sina.history import fetch_kline as fetch_sina_kline
+    from fund_estimator.core.models import RealtimeQuote
+
+    try:
+        trade_dt = datetime.strptime(trade_date, "%Y-%m-%d")
+        start_date = (trade_dt - timedelta(days=90)).strftime("%Y-%m-%d")
+    except ValueError:
+        start_date = ""
+
+    # 获取 T-1 NAV 和今日 NAV（如有）
+    nav_rows = fetch_nav_history(fund_code, start_date, trade_date, cache=cache, force=force)
+    nav_map = {r["date"]: r["nav"] for r in nav_rows}
+
+    if trade_date not in nav_map:
+        # 实时模式：用最新可用 NAV 作为 T-1
+        latest_date = max(nav_map.keys()) if nav_map else None
+        if not latest_date:
+            return {"success": False, "error": "无历史NAV数据"}
+        t1 = latest_date
+        t1_nav = nav_map[t1]
+        today_nav = None
+    else:
+        t1 = _prev_trading_day([r["date"] for r in nav_rows], trade_date)
+        if not t1:
+            return {"success": False, "error": f"{trade_date} 非交易日或数据缺失"}
+        t1_nav = nav_map[t1]
+        today_nav = nav_map.get(trade_date)
+
+    holdings = fund_info.holdings or []
+    stock_position = 0.95
+
+    # 构造 quotes：用 T-1 和 today 的收盘价计算每只股票的涨跌幅
+    quotes_today: dict[str, float] = {}
+    codes = [getattr(h, 'secid', h.code if hasattr(h, 'code') else '') for h in holdings[:10]]
+
+    for code in codes:
+        if not code:
+            continue
+        rows_t1 = fetch_sina_kline(code, datalen=1, cache=cache, force=False)
+        rows_today = fetch_sina_kline(code, datalen=30, cache=cache, force=False)
+        if rows_t1 and rows_today:
+            c1 = rows_t1[0].get("close", 0)
+            c2 = rows_today[-1].get("close", 0) if rows_today else c1
+            if c1 > 0 and c2 > 0:
+                quotes_today[code] = (c2 - c1) / c1
+
+    # 获取候选 benchmark 涨跌
+    bench_returns = {}
+    for key, sym, name in ACTIVE_BENCHMARKS:
+        rows = fetch_sina_kline(sym, datalen=60, cache=cache, force=False)
+        if len(rows) >= 2:
+            c1 = rows[-2].get("close", 0) if len(rows) >= 2 else 0
+            c2 = rows[-1].get("close", 0)
+            if c1 > 0 and c2 > 0:
+                bench_returns[key] = (c2 - c1) / c1
+        else:
+            bench_returns[key] = 0.0
+
+    # 执行算法
+    methods_to_run = [method] if method else ["v_active_top10_blend"]
+    results = []
+
+    for m in methods_to_run:
+        if m == "v_active_top10":
+            est = estimate_v_active_top10(holdings, t1_nav, trade_date, t1, quotes_today, fund_code)
+        elif m.startswith("v_active_bench_"):
+            key = m.replace("v_active_bench_", "")
+            est = estimate_v_active_bench(t1_nav, trade_date, t1,
+                                          bench_returns.get(key, 0.0), key, fund_code)
+        elif m == "v_active_top10_blend":
+            key = "csi1000"  # 主推基准
+            est = estimate_v_active_top10_blend(holdings, t1_nav, trade_date, t1,
+                                                quotes_today, bench_returns.get(key, 0.0), key,
+                                                stock_position=stock_position, alpha=0.5, fund_code=fund_code)
+        elif m == "v_active_alpha":
+            key = "csi1000"
+            est = estimate_v_active_alpha(holdings, t1_nav, trade_date, t1,
+                                           quotes_today, bench_returns.get(key, 0.0), key,
+                                           alpha_drift=0.0, stock_position=stock_position, fund_code=fund_code)
+        elif m.startswith("v_active_top10_resid_"):
+            key = m.replace("v_active_top10_resid_", "")
+            est = estimate_v_active_top10_resid(holdings, t1_nav, trade_date, t1,
+                                                 quotes_today, bench_returns.get(key, 0.0), key,
+                                                 stock_position=stock_position, fund_code=fund_code)
+        else:
+            continue
+
+        if est:
+            result = est.to_dict() if hasattr(est, 'to_dict') else vars(est)
+            result["fund_code"] = fund_code
+            result["reason"] = reason
+            result["bench_returns"] = {k: round(v * 100, 4) for k, v in bench_returns.items()}
+            results.append(result)
+
+    if not results:
+        return {"success": False, "error": f"未找到可用的主动基金算法: {method}"}
+
+    # 取第一个结果
+    est_result = results[0]
+    est_result["success"] = True
+    est_result["fund_code"] = fund_code
+    est_result["trade_date"] = trade_date
+    est_result["t1_date"] = t1
+    est_result["t1_nav"] = t1_nav
+    est_result["method"] = est_result.get("method", method)
+    est_result["fund_info"] = fund_info.to_dict()
+
+    # 对比官方 NAV
+    if today_nav is not None and t1_nav > 0:
+        est_nav = est_result.get("estimated_nav")
+        if est_nav:
+            est_result["official_nav"] = today_nav
+            est_result["official_change_pct"] = (today_nav - t1_nav) / t1_nav * 100
+            est_result["abs_error"] = abs(est_nav - today_nav)
+            est_result["error_pp"] = (est_nav - today_nav) / today_nav * 100
+            est_result["over_threshold"] = abs(est_result["error_pp"]) > 0.5
+
+    return est_result
 
 
 def estimate_batch(

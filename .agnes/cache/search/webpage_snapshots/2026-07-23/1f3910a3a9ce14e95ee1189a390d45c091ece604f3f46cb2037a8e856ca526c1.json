@@ -1,0 +1,20 @@
+{
+  "kind": "webpage_snapshot",
+  "url": "https://finance.sina.com.cn/fund/quotes/160223/bc.shtml",
+  "final_url": "https://finance.sina.com.cn/fund/quotes/160223/bc.shtml",
+  "status": 200,
+  "read_status": "blocked",
+  "content_type": "text/html",
+  "fetched_at": "2026-07-23T09:31:13.140944400+00:00",
+  "title": "国泰创业_国泰创业板指数(LOF)A(160223)_基金行情_新浪财经_新浪网",
+  "description": "新浪财经-基金频道为您提供国泰创业_国泰创业板指数(LOF)A(160223)基金的最新最全新闻公告，最准最新国泰创业板指数(LOF)A(160223基金净值,业绩,持仓股,风格,类型,资产组合,助您把握行情准确出击。",
+  "site_name": null,
+  "published_at": null,
+  "source_type": "media",
+  "text": "",
+  "quote_candidates": [],
+  "word_count": 0,
+  "truncated": false,
+  "blocked": true,
+  "source": "direct_http"
+}

@@ -2,3 +2,4 @@ __pycache__
 *.pyc
 /lof_database/lof_master.db
 .idea
+fund_estimator_active

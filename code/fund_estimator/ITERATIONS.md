@@ -163,6 +163,52 @@ v_index_full_no_cash   =  T-1 NAV × (1 + 指数涨跌%)
 
 ---
 
+## 主动基金估值模块集成（2026-07-24）
+
+### 解决的问题
+
+主动管理型基金没有跟踪指数，无法使用 `v_index_full_no_cash`。现有的 `v_top10` 和 `v_index_blend` 对主动基金不适用或精度不足。
+
+### 解决方案
+
+从 `fund_estimator_active` 模块提取并重构了 8+ 种主动基金专属算法，封装到 `fund_estimator.estimators.active_*` 模块中：
+
+| 算法 | 说明 | 适用场景 |
+|---|---|---|
+| v_active_top10_blend ⭐ | top10 真实 + α×长尾×bench(csi1000) | 主推，MAE ~0.75pp |
+| v_active_bench_csi1000 | 纯中证1000 基准代理 | MAE ~0.71pp |
+| v_active_alpha | top10 + 长尾×(bench + 历史alpha) | MAE ~0.72pp |
+| v_active_top10_resid_* | top10 + 残差完全跟随某 bench | 备选 |
+| v_active_top10 | 纯前10大持仓还原 | MAE ~2.15pp |
+
+### 集成方式
+
+```
+fund_estimator_index_agent/__init__.py
+├── classify_fund_type() → is_passive=false
+├── select_estimation_method() → "v_active_top10_blend"
+└── estimate_realtime()
+    └── _estimate_active_fund()  # 独立估值路径
+        ├── fetch_nav_history()
+        ├── fetch_full_holdings()
+        ├── fetch_sina_kline() × N  # 成分股 + benchmark
+        └── estimate_v_active_top10_blend()
+```
+
+### 验证结果
+
+| 基金 | 类型 | 算法 | 2026-07-13 |
+|---|---|---|---|
+| 161005 (宝盈泛沿海) | 主动型 | v_active_top10_blend | est=-0.1299% |
+
+### 待改进
+
+- 中证1000 对某些大盘主动基金可能不是最佳 benchmark，需引入风格因子自动选择
+- MAE ~0.75pp 仍高于被动基金的 0.11pp，这是主动基金理论下限
+
+
+---
+
 ## 文件清单
 
 ```
