@@ -109,7 +109,7 @@ def run_one_day(today: Date, nav_history: list[dict],
                       "t1_nav": t1_nav, "official_nav": off_nav, "official_pct": off_pct}
 
     # 1. v_active_top10
-    e = estimate_v_active_top10(holding, t1_nav, today_d, quotes)
+    e = estimate_v_active_top10(holding, t1_nav, today_d, t1_date, quotes)
     if e:
         results["v_active_top10"] = (e.estimated_nav, e.error_pp() if e.official_nav else None)
         results["v_active_top10_est_pct"] = e.estimated_change_pct
@@ -201,14 +201,24 @@ def main():
         return
     print(f"拉取 NAV: {len(nav_history)} 行")
 
-    # 拉持仓 (轻量)
-    top10 = fetch_top10("160211")
-    print(f"top10 持仓: {len(top10)} 只")
+    # 拉持仓 (优先完整持仓, 含真实权重)
+    holding = fetch_full_holdings("160211")
     meta = fetch_fund_meta("160211")
-    stock_pos = meta.get("stock_position_pct", 95.0)
     fund_name = meta.get("name", config.FUND_NAME)
+    stock_pos = meta.get("stock_position_pct", 95.0)
+    
+    if holding:
+        holding.fund_name = fund_name
+        holding.stock_position_pct = stock_pos
+        holding.cash_position_pct = 100.0 - stock_pos
+        print(f"完整持仓: {len(holding.positions)} 只, top10: {len(holding.top10())} 只")
+    else:
+        # 降级到轻量版
+        top10 = fetch_top10("160211")
+        print(f"完整持仓拉取失败, 降级到轻量 top10: {len(top10)} 只")
+        holding = _to_fund_holding_from_top10(top10, "160211", fund_name, stock_pos)
+    
     print(f"基金: {fund_name}, 股票仓位: {stock_pos}%")
-    holding = _to_fund_holding_from_top10(top10, "160211", fund_name, stock_pos)
 
     # 找交易日
     trading_days = sorted([r["date"] for r in nav_history if start <= r["date"] <= end])
@@ -217,8 +227,9 @@ def main():
     # 跑回测
     all_results = []
     for td in trading_days:
+        adaptive_alpha_val = holding.adaptive_alpha(td) if holding else args.alpha
         r = run_one_day(td, nav_history, holding,
-                        alpha=args.alpha, primary_bench=args.bench)
+                        alpha=adaptive_alpha_val, primary_bench=args.bench)
         if r:
             all_results.append(r)
 

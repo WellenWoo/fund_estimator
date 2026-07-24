@@ -34,6 +34,27 @@ class FundHolding:
     def coverage_pct(self) -> float:
         """前 10 大持仓合计占净值比 (%)。"""
         return sum(p.weight_pct for p in self.positions[:10])
+    
+    def adaptive_alpha(self, today: Date) -> float:
+        """根据持仓披露时间计算自适应 alpha。
+        
+        离季报越远，alpha 越大（更多依赖 benchmark）：
+        - 0-30 天: alpha=0.3（持仓新鲜）
+        - 30-60 天: alpha=0.5（持仓开始老化）
+        - 60-90 天: alpha=0.7（持仓严重老化）
+        - >90 天: alpha=0.9（完全依赖 benchmark）
+        """
+        if not self.report_date:
+            return 0.5
+        days_since_report = (today - self.report_date).days
+        if days_since_report <= 30:
+            return 0.3
+        elif days_since_report <= 60:
+            return 0.5
+        elif days_since_report <= 90:
+            return 0.7
+        else:
+            return 0.9
 
 
 @dataclass

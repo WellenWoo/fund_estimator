@@ -13,6 +13,7 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
 from data_sources.eastmoney.nav_history import fetch_history
+from data_sources.eastmoney.holdings_full import fetch_full_holdings
 from data_sources.eastmoney.holding import fetch_top10, fetch_fund_meta
 from data_sources.benchmark.get_benchmark import benchmark_return, list_benchmarks
 from data_sources.sina.history import fetch_kline, get_return_pct
@@ -28,7 +29,6 @@ from estimators.blend import estimate_v_active_top10_blend, estimate_v_active_to
 
 def fetch_official_nav(fund_code: str, target_date: Date) -> float | None:
     """从天天基金 fundgz 接口拿最新官方 NAV (含 jzrq)。"""
-    # 该接口返回昨日 (T-1) 收盘 NAV, 需要 T 日 21:00 后才更新
     data = fetch_tiantian_gz(fund_code)
     if data and data.get("dwjz"):
         try:
@@ -42,7 +42,8 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--method", default="v_active_top10_blend",
                     help="v_active_top10 / v_active_bench_csi1000 / v_active_top10_blend ...")
-    ap.add_argument("--alpha", type=float, default=0.5)
+    ap.add_argument("--alpha", type=float, default=None,
+                    help="长尾代理强度, 不指定则使用自适应 alpha")
     ap.add_argument("--bench", default="csi1000")
     ap.add_argument("--trade-date", default=None, help="YYYY-MM-DD, 默认今天")
     ap.add_argument("--fetch-official", action="store_true",
@@ -53,15 +54,12 @@ def main():
     fund_code = config.FUND_CODE
 
     print(f"=== 主动基金 {fund_code} 盘后估值 ===")
-    print(f"  today: {today}, method: {args.method}, bench: {args.bench}, alpha: {args.alpha}")
 
-    # 拉 NAV 历史
     nav_history = fetch_history(fund_code, start=Date(2026, 1, 1), end=today, force=False)
     if not nav_history:
         print("ERR: 拉不到 NAV 历史")
         return
 
-    # 找 T-1
     sorted_nav = sorted([r for r in nav_history if r.get("date") and r["date"] < today],
                         key=lambda r: r["date"])
     if not sorted_nav:
@@ -70,30 +68,46 @@ def main():
     t1_row = sorted_nav[-1]
     t1_date, t1_nav = t1_row["date"], t1_row["nav"]
 
-    # 持仓
-    top10 = fetch_top10(fund_code)
+    # 持仓 (优先完整持仓)
+    holding = fetch_full_holdings(fund_code)
     meta = fetch_fund_meta(fund_code)
     fund_name = meta.get("name", config.FUND_NAME)
     stock_pos = meta.get("stock_position_pct", 95.0)
-    holding = _to_fund_holding_from_top10(top10, fund_code, fund_name, stock_pos)
 
-    # 股票行情 (从缓存 kline 取历史 close 算区间涨跌幅)
+    if holding:
+        holding.fund_name = fund_name
+        holding.stock_position_pct = stock_pos
+        holding.cash_position_pct = 100.0 - stock_pos
+        print(f"完整持仓: {len(holding.positions)} 只, top10: {len(holding.top10())} 只")
+    else:
+        top10 = fetch_top10(fund_code)
+        print(f"完整持仓拉取失败, 降级到轻量 top10: {len(top10)} 只")
+        holding = _to_fund_holding_from_top10(top10, fund_code, fund_name, stock_pos)
+
+    # 自适应 alpha
+    if args.alpha is None and holding:
+        alpha_val = holding.adaptive_alpha(today)
+    else:
+        alpha_val = args.alpha or 0.5
+
+    print(f"  today: {today}, method: {args.method}, bench: {args.bench}, alpha: {alpha_val}")
+
+    top10 = holding.top10()
     codes = [p.code for p in top10]
     quotes = _load_quotes_from_klines(codes, t1_date, today)
 
-    # benchmark
     bench_ret = benchmark_return(args.bench, t1_date, today) or 0.0
 
     # 选定算法
     if args.method == "v_active_top10":
-        est = estimate_v_active_top10(holding, t1_nav, today, quotes)
+        est = estimate_v_active_top10(holding, t1_nav, today, t1_date, quotes)
     elif args.method.startswith("v_active_bench_"):
         key = args.method.replace("v_active_bench_", "")
         est = estimate_v_active_bench(t1_nav, today, t1_date, bench_ret, key,
                                        fund_code=fund_code, fund_name=fund_name)
     elif args.method == "v_active_top10_blend":
         est = estimate_v_active_top10_blend(holding, t1_nav, today, t1_date,
-                                            quotes, bench_ret, args.bench, alpha=args.alpha)
+                                            quotes, bench_ret, args.bench, alpha=alpha_val)
     elif args.method == "v_active_alpha":
         est = estimate_v_active_alpha(holding, t1_nav, today, t1_date,
                                       quotes, bench_ret, args.bench)
@@ -109,7 +123,6 @@ def main():
         print("ERR: 估算失败")
         return
 
-    # 拉官方 NAV 对比
     if args.fetch_official:
         off = fetch_official_nav(fund_code, today)
         if off:
@@ -121,13 +134,11 @@ def main():
         else:
             print("  (官方 NAV 尚未披露)")
 
-    # 输出
     out = est.to_dict()
     out["t1_date"] = t1_date.isoformat()
     out["t1_nav"] = t1_nav
     print("\n" + json.dumps(out, ensure_ascii=False, indent=2))
 
-    # 落盘到 daily_log
     log_row = {
         "date": today.isoformat(),
         "method": est.method,

@@ -14,6 +14,7 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
 from data_sources.eastmoney.nav_history import fetch_history
+from data_sources.eastmoney.holdings_full import fetch_full_holdings
 from data_sources.eastmoney.holding import fetch_top10, fetch_fund_meta
 from data_sources.benchmark.get_benchmark import benchmark_return
 from core import config
@@ -30,7 +31,8 @@ def main():
     ap.add_argument("--start", default="2026-04-25")
     ap.add_argument("--end", default="2026-07-15")
     ap.add_argument("--method", default="v_active_top10_blend")
-    ap.add_argument("--alpha", type=float, default=0.5)
+    ap.add_argument("--alpha", type=float, default=None,
+                    help="长尾代理强度, 不指定则使用自适应 alpha")
     ap.add_argument("--bench", default="csi1000")
     args = ap.parse_args()
 
@@ -39,18 +41,27 @@ def main():
     end = Date.fromisoformat(args.end)
 
     print(f"== 主动基金 {fund_code} 批量回放 ({args.start} ~ {args.end}) ==")
-    print(f"  method: {args.method}, bench: {args.bench}, alpha: {args.alpha}")
 
     nav_history = fetch_history(fund_code, start=Date(2026, 1, 1), end=end, force=False)
     if not nav_history:
         print("ERR: 拉不到 NAV")
         return
 
-    top10 = fetch_top10(fund_code)
+    # 持仓 (优先完整持仓)
+    holding = fetch_full_holdings(fund_code)
     meta = fetch_fund_meta(fund_code)
     fund_name = meta.get("name", config.FUND_NAME)
     stock_pos = meta.get("stock_position_pct", 95.0)
-    holding = _to_fund_holding_from_top10(top10, fund_code, fund_name, stock_pos)
+
+    if holding:
+        holding.fund_name = fund_name
+        holding.stock_position_pct = stock_pos
+        holding.cash_position_pct = 100.0 - stock_pos
+    else:
+        top10 = fetch_top10(fund_code)
+        holding = _to_fund_holding_from_top10(top10, fund_code, fund_name, stock_pos)
+
+    top10 = holding.top10()
     codes = [p.code for p in top10]
     print(f"  基金: {fund_name}, top10: {len(top10)} 只, 股票仓位: {stock_pos}%")
 
@@ -60,7 +71,6 @@ def main():
     results: list[dict] = []
     skipped = 0
     for td in trading_days:
-        # T-1
         t1_row = max((r for r in sorted_nav if r["date"] < td), key=lambda x: x["date"], default=None)
         if not t1_row:
             skipped += 1
@@ -76,15 +86,21 @@ def main():
         quotes = _load_quotes_from_klines(codes, t1_date, td)
         bench_ret = benchmark_return(args.bench, t1_date, td) or 0.0
 
+        # 自适应 alpha
+        if args.alpha is None and holding:
+            alpha_val = holding.adaptive_alpha(td)
+        else:
+            alpha_val = args.alpha or 0.5
+
         if args.method == "v_active_top10":
-            est = estimate_v_active_top10(holding, t1_nav, td, quotes)
+            est = estimate_v_active_top10(holding, t1_nav, td, t1_date, quotes)
         elif args.method.startswith("v_active_bench_"):
             key = args.method.replace("v_active_bench_", "")
             est = estimate_v_active_bench(t1_nav, td, t1_date, bench_ret, key,
                                            fund_code=fund_code, fund_name=fund_name)
         elif args.method == "v_active_top10_blend":
             est = estimate_v_active_top10_blend(holding, t1_nav, td, t1_date,
-                                                quotes, bench_ret, args.bench, alpha=args.alpha)
+                                                quotes, bench_ret, args.bench, alpha=alpha_val)
         elif args.method == "v_active_alpha":
             est = estimate_v_active_alpha(holding, t1_nav, td, t1_date,
                                           quotes, bench_ret, args.bench)
@@ -112,12 +128,12 @@ def main():
             "off_pct": off_pct,
             "err_pp": err,
             "method": est.method,
+            "alpha": alpha_val,
         })
         print(f"  {td}  est={est.estimated_nav:.4f}  off={off_nav:.4f}  "
               f"|err|={abs(err):.4f}pp" if err is not None else
               f"  {td}  est={est.estimated_nav:.4f}  off=N/A")
 
-    # 聚合
     errs = [abs(r["err_pp"]) for r in results if r["err_pp"] is not None]
     if not errs:
         print("无有效结果")
