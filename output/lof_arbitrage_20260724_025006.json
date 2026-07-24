@@ -1,0 +1,180 @@
+{
+  "results": {
+    "501098": {
+      "fund_code": "501098",
+      "fund_info": {
+        "code": "501098",
+        "name": "建信优享科技创新混合(LOF)",
+        "short_name": "建信优享科技创新",
+        "fund_type": "混合型-偏股",
+        "exchange": "SH",
+        "manager": "",
+        "company": "建信基金",
+        "size": 1.21,
+        "shares": 0.5079,
+        "management_fee": 1.2,
+        "custodian_fee": 0.2,
+        "tracking_index": "该基金无跟踪标的",
+        "benchmark": "中国战略新兴产业成份指数收益率*50%+中证综合债指数收益率*30%+恒生指数收益率(使用估值汇率折算)*20%",
+        "risk_level": "",
+        "last_nav": 1.7175,
+        "last_nav_date": "2026-07-23",
+        "last_nav_change": -2.91,
+        "prev_nav": 0.0,
+        "prev_nav_date": "",
+        "market_price": 1.722,
+        "market_open": 1.708,
+        "market_high": 1.725,
+        "market_low": 1.691,
+        "market_prev_close": 1.708,
+        "market_volume": 671.32,
+        "market_amount": 11.5037,
+        "market_change": 0.8196721311475417,
+        "market_update_time": "2026-07-24 10:49:51",
+        "top_holdings": [
+          {
+            "code": "688037",
+            "name": "芯源微",
+            "ratio": 8.94,
+            "shares": 2.47,
+            "market_value": 1085.29,
+            "realtime_price": 0.0,
+            "realtime_change": 1.5105740181268883
+          },
+          {
+            "code": "688630",
+            "name": "芯碁微装",
+            "ratio": 7.27,
+            "shares": 1.61,
+            "market_value": 881.88,
+            "realtime_price": 0.0,
+            "realtime_change": 5.934895833333339
+          },
+          {
+            "code": "688808",
+            "name": "联讯仪器",
+            "ratio": 6.73,
+            "shares": 0.35,
+            "market_value": 817.23,
+            "realtime_price": 0.0,
+            "realtime_change": 3.0959752321981426
+          },
+          {
+            "code": "002475",
+            "name": "立讯精密",
+            "ratio": 5.27,
+            "shares": 9.09,
+            "market_value": 639.94,
+            "realtime_price": 0.0,
+            "realtime_change": -0.3105082529825098
+          },
+          {
+            "code": "688521",
+            "name": "芯原股份",
+            "ratio": 5.15,
+            "shares": 1.68,
+            "market_value": 624.7,
+            "realtime_price": 0.0,
+            "realtime_change": 1.0717488789237606
+          },
+          {
+            "code": "300567",
+            "name": "精测电子",
+            "ratio": 4.77,
+            "shares": 1.82,
+            "market_value": 579.37,
+            "realtime_price": 0.0,
+            "realtime_change": 3.671947809878842
+          },
+          {
+            "code": "002837",
+            "name": "英维克",
+            "ratio": 4.57,
+            "shares": 6.97,
+            "market_value": 554.53,
+            "realtime_price": 0.0,
+            "realtime_change": -3.452790050728194
+          },
+          {
+            "code": "300604",
+            "name": "长川科技",
+            "ratio": 4.33,
+            "shares": 1.54,
+            "market_value": 525.79,
+            "realtime_price": 0.0,
+            "realtime_change": 1.9949182804559822
+          },
+          {
+            "code": "688347",
+            "name": "华虹宏力",
+            "ratio": 4.32,
+            "shares": 1.56,
+            "market_value": 524.7,
+            "realtime_price": 0.0,
+            "realtime_change": -0.4692082111437017
+          },
+          {
+            "code": "688521",
+            "name": "芯原股份",
+            "ratio": 6.43,
+            "shares": 5.42,
+            "market_value": 569.49,
+            "realtime_price": 0.0,
+            "realtime_change": 1.0717488789237606
+          }
+        ],
+        "holdings_date": "",
+        "purchase_fee": 1.5,
+        "redeem_fee_short": 1.5,
+        "redeem_fee_mid": 0.75,
+        "redeem_fee_long": 0.25,
+        "trade_commission": 0.025,
+        "stamp_tax": 0.05
+      },
+      "nav_estimate": {
+        "fund_code": "501098",
+        "estimated_nav": 1.7341,
+        "estimated_change": 0.97,
+        "algorithm": "前十大重仓股模拟法",
+        "confidence": 0.4,
+        "update_time": "2026-07-24 02:50:06",
+        "raw_data": {
+          "total_covered_ratio": 57.78,
+          "uncovered_ratio": 42.22,
+          "base_nav": 1.7175
+        }
+      },
+      "signal": {
+        "fund_code": "501098",
+        "fund_name": "建信优享科技创新混合(LOF)",
+        "market_price": 1.722,
+        "nav": 1.7341,
+        "nav_type": "estimated",
+        "premium_rate": -0.698,
+        "total_cost": 0.954,
+        "signal": "neutral",
+        "signal_strength": 0.0,
+        "profit_margin": -1.652,
+        "liquidity_risk": "中高",
+        "estimation_risk": "高",
+        "time_risk": "中高",
+        "suggestion": "当前折价率为 0.698%，低于套利总成本 0.95%，无套利空间。建议持续监控，当折价率突破 0.95% 时可考虑操作。",
+        "trigger_level": "无",
+        "update_time": "2026-07-24 02:50:06"
+      },
+      "timestamp": "2026-07-24T02:50:06.787581"
+    }
+  },
+  "summary": {
+    "total": 1,
+    "success": 1,
+    "errors": [],
+    "buy_arbitrage_signals": [],
+    "sell_arbitrage_signals": [],
+    "neutral_signals": [
+      "501098"
+    ],
+    "arbitrage_opportunities": 0
+  },
+  "timestamp": "2026-07-24T02:50:06.787592"
+}

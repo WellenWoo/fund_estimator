@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="zh-CN"><head><meta charset="UTF-8">
+<title>LOF基金套利分析报告</title>
+<style>
+body{font-family:'Microsoft YaHei',sans-serif;margin:20px;background:#f5f5f5;}
+.container{max-width:900px;margin:0 auto;background:#fff;padding:20px;border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,0.1);}
+h1{color:#1a1d2e;border-bottom:2px solid #2563eb;padding-bottom:10px;}
+h2{color:#2563eb;margin-top:25px;}
+.summary{background:#eff6ff;padding:15px;border-radius:6px;margin:15px 0;}
+.fund-card{border:1px solid #e5e7eb;border-radius:8px;padding:15px;margin:15px 0;}
+.fund-card h3{margin-top:0;color:#1a1d2e;}
+.metric{display:inline-block;margin:5px 15px 5px 0;}
+.metric .label{color:#6b7280;font-size:0.85em;}
+.metric .value{font-size:1.2em;font-weight:bold;}
+.positive{color:#16a34a;}
+.negative{color:#dc2626;}
+.neutral{color:#2563eb;}
+.signal-buy{background:#dcfce7;color:#166534;padding:5px 10px;border-radius:20px;font-weight:bold;display:inline-block;}
+.signal-sell{background:#fee2e2;color:#991b1b;padding:5px 10px;border-radius:20px;font-weight:bold;display:inline-block;}
+.signal-neutral{background:#f3f4f6;color:#374151;padding:5px 10px;border-radius:20px;font-weight:bold;display:inline-block;}
+table{width:100%;border-collapse:collapse;margin:10px 0;}
+th,td{padding:8px 12px;text-align:left;border-bottom:1px solid #e5e7eb;}
+th{background:#f8fafc;font-weight:600;}
+.risk-low{color:#16a34a;}
+.risk-mid{color:#ea580c;}
+.risk-high{color:#dc2626;}
+.suggestion{background:#fff7ed;border-left:4px solid #ea580c;padding:10px 15px;margin:10px 0;border-radius:0 6px 6px 0;}
+.footer{margin-top:30px;padding-top:15px;border-top:1px solid #e5e7eb;font-size:0.85em;color:#6b7280;}
+</style></head><body><div class='container'>
+<h1>LOF基金折价/溢价套利分析报告</h1>
+<p>生成时间：2026-07-24 02:50:06</p>
+<div class='summary'>
+<h2>分析汇总</h2>
+<p>基金总数：<b>1</b> 只 | 成功：<b>1</b> 只 | 套利机会：<b class='positive'>0</b> 个</p>
+</div>
+<h2>各基金详情</h2>
+<div class='fund-card'>
+<h3>501098</h3>
+<p><b>建信优享科技创新混合(LOF)</b> | 混合型-偏股 | 规模：1.21亿元 | 经理：</p>
+<div>
+<div class='metric'><div class='label'>净值</div><div class='value neutral'>1.7175</div></div>
+<div class='metric'><div class='label'>估算净值</div><div class='value neutral'>1.7341</div></div>
+<div class='metric'><div class='label'>场内价格</div><div class='value neutral'>1.7220</div></div>
+<div class='metric'><div class='label'>折溢价率</div><div class='value negative'>-0.698%</div></div>
+<div class='metric'><div class='label'>套利成本</div><div class='value'>0.954%</div></div>
+</div>
+<p>
+<span class='signal-neutral'>⚪ 无套利信号</span>
+</p>
+<table>
+<tr><th>风险类型</th><th>等级</th><th>说明</th></tr>
+<tr><td>流动性风险</td><td class='risk-mid'>中高</td><td>场内成交11.5万元</td></tr>
+<tr><td>估值误差风险</td><td class='risk-high'>高</td><td>算法：前十大重仓股模拟法，置信度40%</td></tr>
+<tr><td>时间差风险</td><td class='risk-mid'>中高</td><td>T+2套利周期净值波动风险</td></tr>
+</table>
+<div class='suggestion'><b>建议：</b>当前折价率为 0.698%，低于套利总成本 0.95%，无套利空间。建议持续监控，当折价率突破 0.95% 时可考虑操作。</div>
+</div>
+<div class='footer'>
+<h3>风险提示</h3>
+<p>1. 本报告仅供参考，不构成任何投资建议。</p>
+<p>2. LOF套利存在时间差风险、流动性风险、估值偏差风险等多种风险。</p>
+<p>3. 套利需T+2完成，期间净值和场内价格均可能发生大幅波动。</p>
+<p>4. 请充分了解交易规则和风险后审慎决策。</p>
+</div>
+</div></body></html>
