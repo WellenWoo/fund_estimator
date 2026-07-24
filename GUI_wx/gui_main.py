@@ -318,7 +318,7 @@ class MainFrame(wx.Frame):
 
         if len(query) == 6 and query.isdigit():
             cursor.execute(
-                "SELECT fund_code, fund_name FROM master_lof WHERE fund_code = ?",
+                "SELECT fund_code, fund_name FROM active_lofs WHERE fund_code = ?",
                 (query,),
             )
             row = cursor.fetchone()
@@ -328,7 +328,7 @@ class MainFrame(wx.Frame):
             return None
 
         cursor.execute(
-            "SELECT fund_code, fund_name FROM master_lof "
+            "SELECT fund_code, fund_name FROM active_lofs "
             "WHERE fund_name LIKE ? OR full_name LIKE ? OR pinyin LIKE ? "
             "LIMIT 10",
             (f"%{query}%", f"%{query}%", f"%{query}%"),
@@ -685,7 +685,7 @@ class MainFrame(wx.Frame):
         """返回 [(fund_code, fund_name), ...]"""
         conn = sqlite3.connect(_DB_PATH)
         cursor = conn.cursor()
-        cursor.execute("SELECT fund_code, fund_name FROM master_lof ORDER BY fund_code")
+        cursor.execute("SELECT fund_code, fund_name FROM active_lofs ORDER BY fund_code")
         rows = cursor.fetchall()
         conn.close()
         return rows

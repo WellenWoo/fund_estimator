@@ -30,7 +30,7 @@ for tbl in tables:
     if row and row[0] and row[0] >= 10:
         dp = row[0]
         c2 = conn.cursor()
-        c2.execute("SELECT fund_name FROM master_lof WHERE fund_code=?", (code,))
+        c2.execute("SELECT fund_name FROM active_lofs WHERE fund_code=?", (code,))
         nr = c2.fetchone()
         fund_name = nr[0] if nr else code
         c2.close()

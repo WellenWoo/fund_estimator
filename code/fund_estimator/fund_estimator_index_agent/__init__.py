@@ -3,7 +3,7 @@
 通用化的被动指数型基金实时估值引擎。用户只需输入任意基金代码（如 160223、
 159915、510300 等），Agent 自动完成以下流程：
 
-    1. 读取本地数据库 master_lof 判断基金是被动型还是主动型
+    1. 读取本地数据库 active_lofs（活跃LOF子集）判断基金是被动型还是主动型
     2. 选择估值算法：
        - 被动指数型 → 参考指数法 (v_index_full_no_cash)
        - 主动管理型 → 持仓还原法 (v_top10 / v_index_blend)
@@ -362,7 +362,7 @@ def query_fund_detail(fund_code: str) -> dict:
 
 
 def query_db_fund_info(fund_code: str) -> Optional[FundInfo]:
-    """从本地 SQLite 数据库 master_lof 表查询基金信息。
+    """从本地 SQLite 数据库 active_lofs 表查询活跃LOF基金信息。
 
     返回 FundInfo 对象。若基金不在数据库中则返回 None。
 
@@ -386,7 +386,7 @@ def query_db_fund_info(fund_code: str) -> Optional[FundInfo]:
     try:
         row = conn.execute(
             "SELECT fund_name, fund_type, tracker_index, tracker_index_code, is_passive "
-            "FROM master_lof WHERE fund_code = ?",
+            "FROM active_lofs WHERE fund_code = ?",
             (fund_code,),
         ).fetchone()
     finally:
@@ -408,7 +408,7 @@ def classify_fund_type(fund_code: str) -> FundInfo:
     """综合判断基金类型，返回 FundInfo 对象。
 
     流程：
-    1. **优先**从本地数据库 master_lof 表读取被动/主动型标识和跟踪指数（零网络请求）
+    1. **优先**从本地数据库 active_lofs 表读取活跃LOF的被动/主动型标识和跟踪指数（零网络请求）
     2. 若数据库中没有该基金，回退到联网查询：
        - 天天基金 fundgz 接口获取基金名称/类型
        - 东方财富 pingzhongdata 获取详细信息

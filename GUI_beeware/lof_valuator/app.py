@@ -162,11 +162,11 @@ class MainWindow(toga.Window):
     # -------------------------------------------------------------------
 
     def _fetch_all_funds(self):
-        """Return [(fund_code, fund_name), ...] from master_lof."""
+        """Return [(fund_code, fund_name), ...] from active_lofs (trading-active subset)."""
         try:
             conn = sqlite3.connect(_DB_PATH)
             c = conn.cursor()
-            c.execute("SELECT fund_code, fund_name FROM master_lof ORDER BY fund_code")
+            c.execute("SELECT fund_code, fund_name FROM active_lofs ORDER BY fund_code")
             rows = c.fetchall()
             conn.close()
             return rows
@@ -183,14 +183,14 @@ class MainWindow(toga.Window):
             c = conn.cursor()
             if len(query) == 6 and query.isdigit():
                 c.execute(
-                    "SELECT fund_code, fund_name FROM master_lof WHERE fund_code = ?",
+                    "SELECT fund_code, fund_name FROM active_lofs WHERE fund_code = ?",
                     (query,),
                 )
                 row = c.fetchone()
                 conn.close()
                 return row
             c.execute(
-                "SELECT fund_code, fund_name FROM master_lof "
+                "SELECT fund_code, fund_name FROM active_lofs "
                 "WHERE fund_name LIKE ? OR full_name LIKE ? OR pinyin LIKE ? "
                 "LIMIT 10",
                 (f"%{query}%", f"%{query}%", f"%{query}%"),
