@@ -349,9 +349,9 @@ def calculate_premium_discount(
     premium_pct = (price - nav) / nav * 100.0
     
     # 套利信号判断
-    if premium_pct > 1.0:
+    if premium_pct > 2.5:
         signal = "溢价卖出(申购转场内)"
-    elif premium_pct < -1.0:
+    elif premium_pct < -2.5:
         signal = "折价买入(转场内赎回)"
     else:
         signal = "无明显机会"

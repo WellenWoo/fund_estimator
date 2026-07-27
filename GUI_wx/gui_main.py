@@ -231,8 +231,8 @@ class MainFrame(wx.Frame):
             "  估算净值: 天天基金 (fundgz.1234567.com.cn)\n"
             "  估值算法: fund_estimator_index_agent\n"
             "套利逻辑:\n"
-            "  溢价率 > +1% → 溢价卖出 (申购→转场内→卖出)\n"
-            "  溢价率 < -1% → 折价买入 (买入→转场内→赎回)\n"
+            "  溢价率 > +2.5% → 溢价卖出 (申购→转场内→卖出)\n"
+            "  溢价率 < -2.5% → 折价买入 (买入→转场内→赎回)\n"
             "{}".format(datetime.now().strftime("%Y-%m-%d")),
             "关于",
             wx.OK | wx.ICON_INFORMATION,
