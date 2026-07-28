@@ -37,8 +37,98 @@ from fund_realtime import (
     fetch_all_fund_snapshots,
 )
 
+# --- 商品 / 商品期货基金估值模块（v_futures 实时 / v_random 离线） ---
+# 当点击"计算"或"计算全部"且基金是商品/商品期货 LOF 时，
+# 自动路由到 fund_estimator_product 模块，使用 v_futures 进行盘中实时估值。
+try:
+    from fund_estimator.fund_estimator_product import (
+        estimate_commodity_realtime as _estimate_commodity_realtime,
+        get_commodity_for_fund as _get_commodity_for_fund,
+        COMMODITY_MAP as _COMMODITY_MAP,
+    )
+    _HAS_COMMODITY_MODULE = True
+except ImportError:
+    _HAS_COMMODITY_MODULE = False
+    _estimate_commodity_realtime = None
+    _get_commodity_for_fund = None
+    _COMMODITY_MAP = {}
+
 # --- Database path ---
 _DB_PATH = os.path.join(_SCRIPT_DIR, '..', 'lof_database', 'lof_info.db')
+
+
+# ====================================================================
+# Commodity fund routing
+# ====================================================================
+
+def _is_commodity_fund(fund_code: str, fund_name: str = "") -> bool:
+    """判断基金是否为商品 / 商品期货基金。
+
+    判定规则（按优先级）：
+      1) fund_code 已在 COMMODITY_MAP 中（强信号，准确）
+      2) 基金名称含"期货"或"白银"/"黄金"/"原油"/"商品"/"有色"等关键词（弱信号）
+
+    真正的 FTYPE（fundmobapi.eastmoney.com 返回的"商品"标识）也可作为信号，
+    但本函数仅做最轻量判断（避免在单只基金计算时触发联网），准确判定
+    由 estimate_realtime 内部 classify_fund_type() 完成。
+    """
+    if not _HAS_COMMODITY_MODULE:
+        return False
+    # 信号 1：COMMODITY_MAP 命中（最强）
+    if _get_commodity_for_fund and _get_commodity_for_fund(fund_code) is not None:
+        return True
+    # 信号 2：名称含商品/期货关键词（弱）
+    if fund_name:
+        for kw in ("白银", "黄金", "原油", "商品", "有色", "期货"):
+            if kw in fund_name:
+                return True
+    return False
+
+
+def _route_commodity_estimate(
+    fund_code: str,
+    fund_name: str,
+    today: str,
+    method: str = "v_futures",
+    force: bool = False,
+) -> dict:
+    """商品基金估值路由：把 estimate_realtime 风格的调用路由到商品模块。
+
+    优先使用 ``v_futures``（盘中实时用 SHFE 期货价代理，理论 MAE ~0.1pp）；
+    若 sina hq 不可用 / 非盘中时段，``estimate_commodity_realtime`` 内部会
+    fallback 到 v_random。
+
+    Returns
+    -------
+    dict
+        字段命名与 ``estimate_realtime`` 兼容（success, t1_nav, estimated_nav,
+        estimated_change_pct, method, detail, official_nav, error_pp, ...），
+        GUI 可直接复用。
+    """
+    if not _HAS_COMMODITY_MODULE:
+        return {
+            "success": False,
+            "fund_code": fund_code,
+            "trade_date": today,
+            "error": "fund_estimator_product 模块未加载（ImportError）",
+            "method": method,
+        }
+
+    result = _estimate_commodity_realtime(
+        fund_code=fund_code,
+        trade_date=today,
+        method=method,
+        force=force,
+    )
+    # 补充 method_used 字段（与 estimate_realtime 输出一致）
+    if "method_used" not in result:
+        result["method_used"] = result.get("method", method)
+    if "method_reason" not in result:
+        result["method_reason"] = (
+            f"商品/商品期货基金 ({fund_name})，"
+            f"自动路由到 fund_estimator_product，使用 {result.get('method', method)}"
+        )
+    return result
 
 
 # ====================================================================
@@ -479,7 +569,12 @@ class MainFrame(wx.Frame):
         self._run_in_thread(self._do_single_calculate, result)
 
     def _do_single_calculate(self, result):
-        """后台线程：单只基金估值计算。"""
+        """后台线程：单只基金估值计算。
+
+        路由逻辑：
+          - 商品 / 商品期货基金（如 161226）→ fund_estimator_product 的 v_futures
+          - 被动指数 / 主动基金 → fund_estimator_index_agent 的 estimate_realtime
+        """
         fund_code, fund_name = result
         self._post_status(f"正在计算 {fund_code} {fund_name} ...")
 
@@ -487,17 +582,43 @@ class MainFrame(wx.Frame):
             # 1) 获取场内实时价格 + 估算净值 + 溢价率
             snapshot = fetch_fund_snapshot(fund_code)
 
-            # 2) 同时用 fund_estimator 计算 T-1 基准净值
+            # 2) 根据基金类型选择估值入口
             today = datetime.now().strftime("%Y-%m-%d")
             t1_nav = ""
             est_method = ""
-            try:
-                est_result = estimate_realtime(fund_code, today)
-                if est_result.get("success"):
-                    t1_nav = f"{est_result.get('t1_nav', 0):.4f}"
-                    est_method = est_result.get("method_used") or est_result.get("method", "")
-            except Exception:
-                pass
+            is_commodity = _is_commodity_fund(fund_code, fund_name)
+
+            if is_commodity:
+                # ===== 商品 / 商品期货基金 → v_futures 实时估值 =====
+                try:
+                    est_result = _route_commodity_estimate(
+                        fund_code, fund_name, today, method="v_futures",
+                    )
+                    if est_result.get("success"):
+                        t1_nav = f"{est_result.get('t1_nav', 0):.4f}"
+                        est_method = (
+                            f"v_futures[{est_result.get('commodity', '商品')}]"
+                        )
+                        # 用 v_futures 的结果覆盖 snapshot 里的"估算净值/涨跌幅"
+                        # —— 天天基金的官方估值对商品 LOF 误差大，v_futures 更准
+                        snapshot["estimated_nav"] = est_result.get(
+                            "estimated_nav", snapshot.get("estimated_nav", 0),
+                        )
+                        snapshot["estimate_change_pct"] = est_result.get(
+                            "estimated_change_pct",
+                            snapshot.get("estimate_change_pct", 0),
+                        )
+                except Exception as e:
+                    est_method = f"v_futures失败:{type(e).__name__}"
+            else:
+                # ===== 指数 / 主动基金 → estimate_realtime =====
+                try:
+                    est_result = estimate_realtime(fund_code, today)
+                    if est_result.get("success"):
+                        t1_nav = f"{est_result.get('t1_nav', 0):.4f}"
+                        est_method = est_result.get("method_used") or est_result.get("method", "")
+                except Exception:
+                    pass
 
             # 3) 构建行数据
             row_data = {
@@ -519,6 +640,7 @@ class MainFrame(wx.Frame):
                 f"{fund_code} {fund_name} | 场内: {row_data['intraday_price']} | "
                 f"估算: {row_data['est_nav']} | 溢价: {row_data['premium_pct']}% | "
                 f"{final_snapshot.get('signal', '')}"
+                + (f" | [商品:{est_method}]" if is_commodity and est_method else "")
             )
         except Exception as e:
             self._post_status(f"计算出错: {e}")
@@ -686,19 +808,43 @@ class MainFrame(wx.Frame):
         results = [None] * total
 
         def _calc_one(idx, fund_code, fund_name):
-            """单只基金：内部函数（用于 submit）。"""
+            """单只基金：内部函数（用于 submit）。
+
+            路由：
+              - 商品 / 商品期货基金（COMMODITY_MAP 命中） → v_futures
+              - 其它 → estimate_realtime（被动指数 / 主动基金）
+            """
             try:
                 # 1) 获取场内 + 估算快照
                 snapshot = fetch_fund_snapshot(fund_code)
 
-                # 2) fund_estimator 估值
-                est_result = estimate_realtime(fund_code, today)
+                # 2) 根据基金类型选择估值入口
+                is_commodity = _is_commodity_fund(fund_code, fund_name)
+                if is_commodity:
+                    est_result = _route_commodity_estimate(
+                        fund_code, fund_name, today, method="v_futures",
+                    )
+                else:
+                    est_result = estimate_realtime(fund_code, today)
 
                 t1_nav = ""
                 est_method = ""
                 if est_result.get("success"):
                     t1_nav = f"{est_result.get('t1_nav', 0):.4f}"
-                    est_method = est_result.get("method_used") or est_result.get("method", "")
+                    if is_commodity:
+                        est_method = (
+                            f"v_futures[{est_result.get('commodity', '商品')}]"
+                        )
+                        # 用 v_futures 结果覆盖 snapshot
+                        snapshot["estimated_nav"] = est_result.get(
+                            "estimated_nav", snapshot.get("estimated_nav", 0),
+                        )
+                        snapshot["estimate_change_pct"] = est_result.get(
+                            "estimated_change_pct",
+                            snapshot.get("estimate_change_pct", 0),
+                        )
+                    else:
+                        est_method = est_result.get("method_used") or est_result.get("method", "")
                     return {
                         "index": idx,
                         "row_data": {
