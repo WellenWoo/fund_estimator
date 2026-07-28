@@ -60,6 +60,13 @@ class FundGrid(wx.grid.Grid):
         ("status", "状态", 70),
     ]
 
+    # 可点击列头排序的列：{列索引: 数据键名}
+    SORTABLE_COLUMNS = {
+        3: "intraday_change",  # 场内涨幅
+        5: "est_change",       # 估算涨幅
+        6: "premium_pct",      # 溢价率
+    }
+
     def __init__(self, parent):
         super().__init__(parent)
         n_cols = len(self.COLUMNS)
@@ -78,6 +85,15 @@ class FundGrid(wx.grid.Grid):
         self.green_colour = wx.Colour(240, 255, 240)
         self.white_colour = wx.WHITE
 
+        # ===== 排序状态 =====
+        self._raw_data = []        # 原始行数据 (list[dict])
+        self._sort_col = None      # 当前排序列索引, None 表示未排序
+        self._sort_asc = True      # True=升序, False=降序
+        self._base_labels = [label for _, label, _ in self.COLUMNS]
+
+        # 列头左键点击 → 切换排序
+        self.Bind(wx.grid.EVT_GRID_LABEL_LEFT_CLICK, self._on_label_left_click)
+
     def _color_cell(self, row, col, value_str):
         """对溢价率列着色。"""
         if col == 6:  # premium_pct
@@ -92,20 +108,100 @@ class FundGrid(wx.grid.Grid):
             except (ValueError, TypeError):
                 self.SetCellBackgroundColour(row, col, self.white_colour)
 
-    def append_row(self, row_idx, data_dict):
-        """写入一行数据。"""
-        for idx, (key, _, _) in enumerate(self.COLUMNS):
-            val = str(data_dict.get(key, ""))
-            self.SetCellValue(row_idx, idx, val)
-            self._color_cell(row_idx, idx, val)
+    @staticmethod
+    def _parse_numeric(value_str):
+        """从可能带 % 或逗号的字符串中解析浮点数; 无法解析返回 None。"""
+        try:
+            return float(str(value_str).replace("%", "").replace(",", "").strip())
+        except (ValueError, TypeError):
+            return None
 
-    def clear_and_add(self, rows_data):
-        """清空并重绘表格。"""
-        self.ClearGrid()
+    def _sort_key(self, row_data, key):
+        """排序键: 无法解析的值始终排在末尾。"""
+        v = self._parse_numeric(row_data.get(key, ""))
+        if v is None:
+            return (1, 0.0)
+        return (0, v)
+
+    def _update_header_indicators(self):
+        """更新列头标签: 当前排序列追加 ▲/▼, 其它列恢复原始标签。"""
+        for idx, base_label in enumerate(self._base_labels):
+            if idx == self._sort_col:
+                arrow = " ▲" if self._sort_asc else " ▼"
+                self.SetColLabelValue(idx, base_label + arrow)
+            else:
+                self.SetColLabelValue(idx, base_label)
+
+    def _on_label_left_click(self, event):
+        """列头左键点击: 可排序列切换升/降序, 其它列放行默认行为。"""
+        col = event.GetCol()
+        if col in self.SORTABLE_COLUMNS:
+            if self._sort_col == col:
+                self._sort_asc = not self._sort_asc
+            else:
+                self._sort_col = col
+                self._sort_asc = True
+            self._apply_sort()
+        else:
+            event.Skip()
+
+    def _apply_sort(self):
+        """按当前排序列对 _raw_data 排序后刷新表格。"""
+        self._update_header_indicators()
+        if self._sort_col is None or not self._raw_data:
+            return
+        key = self.SORTABLE_COLUMNS[self._sort_col]
+        sorted_data = sorted(
+            self._raw_data,
+            key=lambda r: self._sort_key(r, key),
+            reverse=not self._sort_asc,
+        )
+        self._redraw(sorted_data)
+
+    def _redraw(self, rows_data):
+        """按 rows_data 重置表格行数与内容 (不维护 _raw_data)。"""
+        if self.GetNumberRows() > 0:
+            self.DeleteRows(0, self.GetNumberRows())
         if rows_data:
             self.AppendRows(len(rows_data))
             for i, row_data in enumerate(rows_data):
-                self.append_row(i, row_data)
+                self._write_row(i, row_data)
+
+    def _write_row(self, row_idx, row_data):
+        """仅写入单元格内容与颜色, 不维护 _raw_data。"""
+        for idx, (key, _, _) in enumerate(self.COLUMNS):
+            val = str(row_data.get(key, ""))
+            self.SetCellValue(row_idx, idx, val)
+            self._color_cell(row_idx, idx, val)
+
+    def append_row(self, row_idx, row_data):
+        """写入一行数据, 同时保存到 _raw_data 供后续排序使用。"""
+        while len(self._raw_data) <= row_idx:
+            self._raw_data.append({})
+        self._raw_data[row_idx] = dict(row_data)
+        self._write_row(row_idx, row_data)
+
+    def clear_and_add(self, rows_data):
+        """清空并重绘表格; 若已设置排序列, 新数据按相同规则排序。"""
+        if self.GetNumberRows() > 0:
+            self.DeleteRows(0, self.GetNumberRows())
+
+        self._raw_data = list(rows_data) if rows_data else []
+
+        if self._sort_col is not None and self._raw_data:
+            key = self.SORTABLE_COLUMNS[self._sort_col]
+            self._raw_data = sorted(
+                self._raw_data,
+                key=lambda r: self._sort_key(r, key),
+                reverse=not self._sort_asc,
+            )
+
+        self._update_header_indicators()
+
+        if self._raw_data:
+            self.AppendRows(len(self._raw_data))
+            for i, row_data in enumerate(self._raw_data):
+                self._write_row(i, row_data)
 
 
 # ====================================================================

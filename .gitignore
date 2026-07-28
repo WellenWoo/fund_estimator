@@ -3,3 +3,5 @@ __pycache__
 /lof_database/lof_master.db
 .idea
 fund_estimator_active
+.agnes
+output
