@@ -1,0 +1,349 @@
+{
+  "fund_code": "164703",
+  "fund_name": "汇添富纯债(LOF)A",
+  "windows": {
+    "short_60d": {
+      "start": "2026-04-27",
+      "end": "2026-07-23",
+      "results": [
+        {
+          "fund_code": "164703",
+          "method": "v_bond_csi_corp",
+          "method_label": "沪深企业债指数 (sh000061) 直接代理 ⭐",
+          "n": 59,
+          "skipped_jump_days": 0,
+          "mae": 0.0366,
+          "rmse": 0.046,
+          "max_err": 0.1039,
+          "mean_err": 0.01,
+          "bias": 0.01,
+          "over_threshold": 0,
+          "threshold_pp": 0.5
+        },
+        {
+          "fund_code": "164703",
+          "method": "v_bond_sse_gov",
+          "method_label": "上证国债指数 (sh000012) 直接代理",
+          "n": 59,
+          "skipped_jump_days": 0,
+          "mae": 0.0219,
+          "rmse": 0.0282,
+          "max_err": 0.0808,
+          "mean_err": 0.0004,
+          "bias": 0.0004,
+          "over_threshold": 0,
+          "threshold_pp": 0.5
+        },
+        {
+          "fund_code": "164703",
+          "method": "v_bond_t1_persist",
+          "method_label": "T-1 涨跌% 动量代理",
+          "n": 59,
+          "skipped_jump_days": 0,
+          "mae": 0.0401,
+          "rmse": 0.0511,
+          "max_err": 0.1158,
+          "mean_err": -0.001,
+          "bias": -0.001,
+          "over_threshold": 0,
+          "threshold_pp": 0.5
+        },
+        {
+          "fund_code": "164703",
+          "method": "v_bond_random_walk",
+          "method_label": "无偏随机游走 (T 涨跌% = 0) 基线",
+          "n": 59,
+          "skipped_jump_days": 0,
+          "mae": 0.0362,
+          "rmse": 0.0459,
+          "max_err": 0.1042,
+          "mean_err": -0.0151,
+          "bias": -0.0151,
+          "over_threshold": 0,
+          "threshold_pp": 0.5
+        },
+        {
+          "fund_code": "164703",
+          "method": "v_bond_blend",
+          "method_label": "0.3 × T-1 + 0.7 × 0 保守动量混合",
+          "n": 59,
+          "skipped_jump_days": 0,
+          "mae": 0.0335,
+          "rmse": 0.0416,
+          "max_err": 0.0811,
+          "mean_err": -0.0096,
+          "bias": -0.0096,
+          "over_threshold": 0,
+          "threshold_pp": 0.5
+        }
+      ]
+    },
+    "mid_180d": {
+      "start": "2026-01-15",
+      "end": "2026-07-23",
+      "results": [
+        {
+          "fund_code": "164703",
+          "method": "v_bond_csi_corp",
+          "method_label": "沪深企业债指数 (sh000061) 直接代理 ⭐",
+          "n": 124,
+          "skipped_jump_days": 0,
+          "mae": 0.0375,
+          "rmse": 0.0503,
+          "max_err": 0.1981,
+          "mean_err": 0.0045,
+          "bias": 0.0045,
+          "over_threshold": 0,
+          "threshold_pp": 0.5
+        },
+        {
+          "fund_code": "164703",
+          "method": "v_bond_sse_gov",
+          "method_label": "上证国债指数 (sh000012) 直接代理",
+          "n": 124,
+          "skipped_jump_days": 0,
+          "mae": 0.0225,
+          "rmse": 0.0283,
+          "max_err": 0.0929,
+          "mean_err": -0.0025,
+          "bias": -0.0025,
+          "over_threshold": 0,
+          "threshold_pp": 0.5
+        },
+        {
+          "fund_code": "164703",
+          "method": "v_bond_t1_persist",
+          "method_label": "T-1 涨跌% 动量代理",
+          "n": 124,
+          "skipped_jump_days": 0,
+          "mae": 0.0297,
+          "rmse": 0.0415,
+          "max_err": 0.1158,
+          "mean_err": 0.0002,
+          "bias": 0.0002,
+          "over_threshold": 0,
+          "threshold_pp": 0.5
+        },
+        {
+          "fund_code": "164703",
+          "method": "v_bond_random_walk",
+          "method_label": "无偏随机游走 (T 涨跌% = 0) 基线",
+          "n": 124,
+          "skipped_jump_days": 0,
+          "mae": 0.0314,
+          "rmse": 0.0395,
+          "max_err": 0.1042,
+          "mean_err": -0.0169,
+          "bias": -0.0169,
+          "over_threshold": 0,
+          "threshold_pp": 0.5
+        },
+        {
+          "fund_code": "164703",
+          "method": "v_bond_blend",
+          "method_label": "0.3 × T-1 + 0.7 × 0 保守动量混合",
+          "n": 124,
+          "skipped_jump_days": 0,
+          "mae": 0.0274,
+          "rmse": 0.0353,
+          "max_err": 0.0811,
+          "mean_err": -0.011,
+          "bias": -0.011,
+          "over_threshold": 0,
+          "threshold_pp": 0.5
+        }
+      ]
+    },
+    "long_5y": {
+      "start": "2021-07-23",
+      "end": "2026-07-23",
+      "results": [
+        {
+          "fund_code": "164703",
+          "method": "v_bond_csi_corp",
+          "method_label": "沪深企业债指数 (sh000061) 直接代理 ⭐",
+          "n": 1213,
+          "skipped_jump_days": 0,
+          "mae": 0.0652,
+          "rmse": 0.2377,
+          "max_err": 4.5877,
+          "mean_err": 0.0126,
+          "bias": 0.0126,
+          "over_threshold": 6,
+          "threshold_pp": 0.5
+        },
+        {
+          "fund_code": "164703",
+          "method": "v_bond_sse_gov",
+          "method_label": "上证国债指数 (sh000012) 直接代理",
+          "n": 1213,
+          "skipped_jump_days": 0,
+          "mae": 0.0475,
+          "rmse": 0.2255,
+          "max_err": 4.5296,
+          "mean_err": 0.0121,
+          "bias": 0.0121,
+          "over_threshold": 3,
+          "threshold_pp": 0.5
+        },
+        {
+          "fund_code": "164703",
+          "method": "v_bond_t1_persist",
+          "method_label": "T-1 涨跌% 动量代理",
+          "n": 1213,
+          "skipped_jump_days": 0,
+          "mae": 0.0603,
+          "rmse": 0.2338,
+          "max_err": 4.5296,
+          "mean_err": 0.0108,
+          "bias": 0.0108,
+          "over_threshold": 4,
+          "threshold_pp": 0.5
+        },
+        {
+          "fund_code": "164703",
+          "method": "v_bond_random_walk",
+          "method_label": "无偏随机游走 (T 涨跌% = 0) 基线",
+          "n": 1213,
+          "skipped_jump_days": 0,
+          "mae": 0.0507,
+          "rmse": 0.2286,
+          "max_err": 4.5296,
+          "mean_err": -0.0014,
+          "bias": -0.0014,
+          "over_threshold": 4,
+          "threshold_pp": 0.5
+        },
+        {
+          "fund_code": "164703",
+          "method": "v_bond_blend",
+          "method_label": "0.3 × T-1 + 0.7 × 0 保守动量混合",
+          "n": 1213,
+          "skipped_jump_days": 0,
+          "mae": 0.0499,
+          "rmse": 0.2279,
+          "max_err": 4.5296,
+          "mean_err": 0.0024,
+          "bias": 0.0024,
+          "over_threshold": 3,
+          "threshold_pp": 0.5
+        }
+      ]
+    },
+    "long_max": {
+      "start": "2013-11-06",
+      "end": "2026-07-23",
+      "results": [
+        {
+          "fund_code": "164703",
+          "method": "v_bond_csi_corp",
+          "method_label": "沪深企业债指数 (sh000061) 直接代理 ⭐",
+          "n": 3007,
+          "skipped_jump_days": 3,
+          "mae": 0.0656,
+          "rmse": 0.2164,
+          "max_err": 4.7085,
+          "mean_err": -0.0076,
+          "bias": -0.0076,
+          "over_threshold": 20,
+          "threshold_pp": 0.5
+        },
+        {
+          "fund_code": "164703",
+          "method": "v_bond_sse_gov",
+          "method_label": "上证国债指数 (sh000012) 直接代理",
+          "n": 3007,
+          "skipped_jump_days": 3,
+          "mae": 0.0581,
+          "rmse": 0.211,
+          "max_err": 4.7085,
+          "mean_err": -0.0085,
+          "bias": -0.0085,
+          "over_threshold": 17,
+          "threshold_pp": 0.5
+        },
+        {
+          "fund_code": "164703",
+          "method": "v_bond_t1_persist",
+          "method_label": "T-1 涨跌% 动量代理",
+          "n": 3007,
+          "skipped_jump_days": 3,
+          "mae": 0.0813,
+          "rmse": 0.2661,
+          "max_err": 6.4412,
+          "mean_err": 0.0104,
+          "bias": 0.0104,
+          "over_threshold": 28,
+          "threshold_pp": 0.5
+        },
+        {
+          "fund_code": "164703",
+          "method": "v_bond_random_walk",
+          "method_label": "无偏随机游走 (T 涨跌% = 0) 基线",
+          "n": 3007,
+          "skipped_jump_days": 3,
+          "mae": 0.0593,
+          "rmse": 0.2123,
+          "max_err": 4.7085,
+          "mean_err": -0.0139,
+          "bias": -0.0139,
+          "over_threshold": 18,
+          "threshold_pp": 0.5
+        },
+        {
+          "fund_code": "164703",
+          "method": "v_bond_blend",
+          "method_label": "0.3 × T-1 + 0.7 × 0 保守动量混合",
+          "n": 3007,
+          "skipped_jump_days": 3,
+          "mae": 0.063,
+          "rmse": 0.2173,
+          "max_err": 4.7085,
+          "mean_err": -0.0066,
+          "bias": -0.0066,
+          "over_threshold": 19,
+          "threshold_pp": 0.5
+        }
+      ]
+    }
+  },
+  "baseline_active": {
+    "v_active_bench_csi1000": {
+      "n": 59,
+      "skipped": 0,
+      "mae": 1.6593,
+      "rmse": 2.0816,
+      "max_err": 6.4815,
+      "mean_err": 0.2811,
+      "over": 50
+    },
+    "v_active_bench_csi300": {
+      "n": 59,
+      "skipped": 0,
+      "mae": 1.2213,
+      "rmse": 1.5071,
+      "max_err": 3.7504,
+      "mean_err": 0.0355,
+      "over": 44
+    },
+    "v_active_bench_csi500": {
+      "n": 59,
+      "skipped": 0,
+      "mae": 1.6641,
+      "rmse": 2.0783,
+      "max_err": 5.8927,
+      "mean_err": 0.1511,
+      "over": 49
+    },
+    "v_active_bench_cyb": {
+      "n": 59,
+      "skipped": 0,
+      "mae": 2.2747,
+      "rmse": 2.808,
+      "max_err": 7.7063,
+      "mean_err": 0.0795,
+      "over": 49
+    }
+  },
+  "generated_at": "2026-07-29T11:08:56.972659"
+}
