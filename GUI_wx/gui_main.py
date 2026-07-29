@@ -131,6 +131,27 @@ def _route_commodity_estimate(
     return result
 
 
+def _format_official_nav(est_result: dict) -> tuple[str, str]:
+    """从估值结果中提取官方 T 日净值 + 估值偏离。
+
+    优先级：
+      1) est_result["official_nav"] 存在（商品 / 指数 estimate_realtime 都有）
+      2) 否则返回 ("未公布", "")
+
+    估值偏离 = (估算净值 - T净值) / T净值 * 100，保留 2 位小数 + % 号。
+    """
+    official_nav = est_result.get("official_nav")
+    if not official_nav or float(official_nav) <= 0:
+        return ("未公布", "")
+
+    est_nav = est_result.get("estimated_nav")
+    if not est_nav or float(est_nav) <= 0:
+        return (f"{float(official_nav):.4f}", "")
+
+    err_pct = (float(est_nav) - float(official_nav)) / float(official_nav) * 100.0
+    return (f"{float(official_nav):.4f}", f"{err_pct:+.2f}%")
+
+
 # ====================================================================
 # Grid 组件
 # ====================================================================
@@ -145,16 +166,21 @@ class FundGrid(wx.grid.Grid):
         ("intraday_change", "场内涨幅(%)", 90),
         ("est_nav", "估算净值", 90),
         ("est_change", "估算涨幅(%)", 90),
+        ("t1_nav", "T-1净值", 80),
+        ("t_nav", "T净值", 80),
+        ("est_error_pct", "估值偏离(%)", 90),
         ("premium_pct", "溢价率(%)", 90),
         ("signal", "套利信号", 150),
-        ("status", "状态", 70),
+        ("method", "算法", 130),
+        ("status", "状态", 80),
     ]
 
     # 可点击列头排序的列：{列索引: 数据键名}
     SORTABLE_COLUMNS = {
         3: "intraday_change",  # 场内涨幅
         5: "est_change",       # 估算涨幅
-        6: "premium_pct",      # 溢价率
+        8: "est_error_pct",    # 估值偏离
+        9: "premium_pct",      # 溢价率
     }
 
     def __init__(self, parent):
@@ -186,7 +212,7 @@ class FundGrid(wx.grid.Grid):
 
     def _color_cell(self, row, col, value_str):
         """对溢价率列着色。"""
-        if col == 6:  # premium_pct
+        if col == 9:  # premium_pct
             try:
                 v = float(value_str)
                 if v > 0:
@@ -587,6 +613,7 @@ class MainFrame(wx.Frame):
             t1_nav = ""
             est_method = ""
             is_commodity = _is_commodity_fund(fund_code, fund_name)
+            est_result: dict = {}  # 用于提取官方 T 日净值
 
             if is_commodity:
                 # ===== 商品 / 商品期货基金 → v_futures 实时估值 =====
@@ -620,7 +647,10 @@ class MainFrame(wx.Frame):
                 except Exception:
                     pass
 
-            # 3) 构建行数据
+            # 3) 提取 T 日官方净值 + 估值偏离
+            t_nav, est_error_pct = _format_official_nav(est_result)
+
+            # 4) 构建行数据
             row_data = {
                 "fund_code": fund_code,
                 "fund_name": fund_name,
@@ -628,9 +658,13 @@ class MainFrame(wx.Frame):
                 "intraday_change": f'{snapshot.get("intraday_change_pct", 0):.2f}%',
                 "est_nav": f'{snapshot.get("estimated_nav", 0):.4f}',
                 "est_change": f'{snapshot.get("estimate_change_pct", 0):.2f}%',
+                "t1_nav": t1_nav,
+                "t_nav": t_nav,
+                "est_error_pct": est_error_pct,
                 "premium_pct": f'{snapshot.get("premium_pct", 0):.2f}',
                 "signal": snapshot.get("signal", ""),
-                "status": f"T-1:{t1_nav}" + (f" {est_method}" if est_method else ""),
+                "method": est_method,
+                "status": "成功",
             }
 
             final_snapshot = snapshot
@@ -678,9 +712,13 @@ class MainFrame(wx.Frame):
                 "intraday_change": f'{snapshot.get("intraday_change_pct", 0):.2f}%',
                 "est_nav": f'{snapshot.get("estimated_nav", 0):.4f}',
                 "est_change": f'{snapshot.get("estimate_change_pct", 0):.2f}%',
+                "t1_nav": "",
+                "t_nav": "",
+                "est_error_pct": "",
                 "premium_pct": f'{snapshot.get("premium_pct", 0):.2f}',
                 "signal": snapshot.get("signal", ""),
-                "status": "实时",
+                "method": "",
+                "status": "成功" if "error" not in snapshot else "数据不足",
             }
             self._post_grid_clear_add([row_data])
             self._post_status(
@@ -749,9 +787,13 @@ class MainFrame(wx.Frame):
                 "intraday_change": f'{snap.get("intraday_change_pct", 0):.2f}%',
                 "est_nav": f'{snap.get("estimated_nav", 0):.4f}',
                 "est_change": f'{snap.get("estimate_change_pct", 0):.2f}%',
+                "t1_nav": "",
+                "t_nav": "",
+                "est_error_pct": "",
                 "premium_pct": f'{snap.get("premium_pct", 0):.2f}',
                 "signal": snap.get("signal", ""),
-                "status": "OK" if "error" not in snap else "数据不足",
+                "method": "",
+                "status": "成功" if "error" not in snap else "数据不足",
             }
             self._post_append_row(i, row_data)
 
@@ -854,9 +896,11 @@ class MainFrame(wx.Frame):
                             "intraday_change": f'{snapshot.get("intraday_change_pct", 0):.2f}%',
                             "est_nav": f'{snapshot.get("estimated_nav", 0):.4f}',
                             "est_change": f'{snapshot.get("estimate_change_pct", 0):.2f}%',
+                            "t1_nav": t1_nav,
                             "premium_pct": f'{snapshot.get("premium_pct", 0):.2f}',
                             "signal": snapshot.get("signal", ""),
-                            "status": f"T-1:{t1_nav}" + (f" {est_method}" if est_method else "失败"),
+                            "method": est_method,
+                            "status": "成功",
                         },
                         "success": True,
                     }
@@ -870,9 +914,11 @@ class MainFrame(wx.Frame):
                             "intraday_change": f'{snapshot.get("intraday_change_pct", 0):.2f}%',
                             "est_nav": f'{snapshot.get("estimated_nav", 0):.4f}',
                             "est_change": f'{snapshot.get("estimate_change_pct", 0):.2f}%',
+                            "t1_nav": "",
                             "premium_pct": f'{snapshot.get("premium_pct", 0):.2f}',
                             "signal": snapshot.get("signal", ""),
-                            "status": "失败",
+                            "method": "",
+                            "status": "获取失败",
                         },
                         "success": False,
                     }
@@ -882,6 +928,8 @@ class MainFrame(wx.Frame):
                     "row_data": {
                         "fund_code": fund_code,
                         "fund_name": fund_name,
+                        "t1_nav": "",
+                        "method": "",
                         "status": f"异常: {str(e)[:8]}",
                     },
                     "success": False,
